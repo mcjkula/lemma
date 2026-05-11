@@ -27,24 +27,22 @@ into the live reward path without a separate product decision.
 
 - Working checkout: `/Users/leehall/lemma`.
 - Local branch: `main` tracking `origin/main`.
-- Current local/GitHub `main` head during the Codex audit:
-  `28bbbfc8c747c46ff5d6c5b0e015e5451aeb4e58`
-  (`Docs: add cursor-audit.md; CI gate pip-audit/bandit; production security note; README index`).
-- `git ls-remote origin HEAD refs/heads/main` matched local `main` at
-  `28bbbfc8c747c46ff5d6c5b0e015e5451aeb4e58`.
+- Current `main` head before the validator inbound-limit fix:
+  `cba0fac41d40a272d49292f899a2c51071205c42`
+  (`Docs: add Codex audit and refresh tracker`).
 - Latest audit docs:
   - Cursor: [`docs/cursor-audit.md`](docs/cursor-audit.md), rating `7.5 / 10`.
   - Codex: [`docs/codex-audit.md`](docs/codex-audit.md), rating `7.2 / 10`.
 
 ## Local Verification Snapshot
 
-Current local baseline from the Codex audit on 2026-05-11:
+Current local baseline after the validator inbound-limit fix on 2026-05-11:
 
 - `.venv/bin/ruff check lemma tests tools`: passed.
 - `.venv/bin/mypy lemma`: passed,
-  `Success: no issues found in 68 source files`.
+  `Success: no issues found in 69 source files`.
 - `.venv/bin/pytest tests -q`: passed,
-  `254 passed, 2 skipped, 12 warnings`.
+  `255 passed, 2 skipped, 12 warnings`.
 - `.venv/bin/python scripts/ci_verify_generated_templates.py`:
   `OK: generated template metadata gate covered 40 builders`.
 - `.venv/bin/bandit -q -r lemma -ll`: passed with no medium/high findings.
