@@ -27,9 +27,9 @@ into the live reward path without a separate product decision.
 
 - Working checkout: `/Users/leehall/lemma`.
 - Local branch: `main` tracking `origin/main`.
-- Current `main` head before the remote worker safe-default fix:
-  `f06ab1ad1a94a9787c07ee39169f1e089fc2f939`
-  (`Refresh audit next steps after proof cap`).
+- Current local/GitHub `main` head after the audit-fix sequence:
+  `00e18051933b76b3d097956b79adeec236088711`
+  (`Clarify proof eligibility versus allocation`).
 - Latest audit docs:
   - Cursor: [`docs/cursor-audit.md`](docs/cursor-audit.md), rating `7.5 / 10`.
   - Codex: [`docs/codex-audit.md`](docs/codex-audit.md), rating `7.2 / 10`.
@@ -48,8 +48,13 @@ Current local baseline after the remote worker safe-default fix on 2026-05-11:
 - `.venv/bin/bandit -q -r lemma -ll`: passed with no medium/high findings.
 - `.venv/bin/pip-audit --ignore-vuln PYSEC-2025-49 --ignore-vuln PYSEC-2022-42969`:
   passed with `No known vulnerabilities found, 3 ignored`.
-- Docker Lean golden was not rerun in this pass because the local Docker daemon
-  was unavailable at the configured socket.
+- GitHub Actions CI run
+  `https://github.com/spacetime-tao/lemma/actions/runs/25691630114`
+  passed on `00e1805`, including the `test` job and `docker-lean-sandbox`
+  job with Docker golden Lean verify and generated-template lake build.
+- The Docker image publish workflow passed on code commit `551b217`; the final
+  `00e1805` commit was docs-only. Local Docker golden/build could not run
+  because the Docker daemon socket was unavailable.
 
 ## VPS Status Snapshot
 
