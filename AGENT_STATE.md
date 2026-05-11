@@ -1,94 +1,82 @@
 # Agent State
 
 This is the handoff note for chat freezes, context loss, and future agents.
-Keep it short, current, and useful. The active work tracker is
-[`docs/workplan.md`](docs/workplan.md).
+
+Keep it short. The active tracker is [docs/workplan.md](docs/workplan.md).
 
 ## Working Mentality
 
-Treat every line of code as a liability. Every line must be maintained,
-reviewed, tested, and understood. Prefer lean changes that fix the underlying
-shape of the system over extra layers of checks, guards, or compensating logic.
+Treat every line of code as a liability.
+
+Every line must be maintained, reviewed, tested, and understood. Prefer simple
+changes that fix the shape of the system over extra checks and guards.
 
 ## Current Direction
 
-Lemma's live reward axis is binary proof verification:
+Lemma's live reward rule is binary proof verification:
 
-- a miner submits `proof_script`;
-- the validator checks that proof against the published theorem with Lean;
-- a proof that verifies can enter scoring;
-- a proof that fails verification does not enter scoring.
+- miner submits `proof_script`;
+- validator checks it with Lean;
+- passing proof can enter scoring;
+- failing proof cannot receive proof score.
 
-Informal reasoning and optional prose-judge tooling are out-of-band. Do not add
-reasoning prose, subjective judge scores, or proof-efficiency heuristics back
-into the live reward path without a separate product decision.
+Informal reasoning and prose-judge tools are out of band. Do not add prose
+scores, judge scores, proof-efficiency scoring, or reasoning text back into the
+live reward path without a separate product decision.
 
-## Current Repository State
+## Current Repo State
 
-- Working checkout: `/Users/leehall/lemma`.
-- Local branch: `main` tracking `origin/main`.
-- Current local/GitHub head during this audit:
-  `b7088f00295fe0e23ad4a856ac43799b9acd8882`
-  (`Remove stale judge config from proof-only path`).
-- Current GitHub failure before this handoff update:
-  - CI run `25649757216` failed in `uv sync --extra dev`.
-  - Docker publish run `25649757232` failed in `pip install .`.
-  - Root cause: `pyproject.toml` added a direct-reference `cli` extra for
-    `lemma-cli` without Hatch metadata
-    `allow-direct-references = true`.
-- Local fix in this working tree: `[tool.hatch.metadata]`
-  `allow-direct-references = true`.
+- Checkout: `/Users/leehall/lemma`.
+- Branch: `main`, tracking `origin/main`.
+- Current local and GitHub head:
+  `67dfd477c1a274e613b1ea5f01f80af24c2822ee`
+  (`Fix Hatch direct refs and consolidate tracker docs`).
+- The Hatch direct-reference fix is on `main`.
+- GitHub CI run `25650611350` for `67dfd47` completed successfully.
 
-## Local Verification Snapshot
+## Verification Snapshot
 
-Current local baseline after the metadata fix on 2026-05-11:
+Local checks from the Hatch fix pass:
 
-- `uv sync --extra dev`: passed after sandbox escalation for the uv cache path.
-- `uv run ruff check lemma tests tools`: passed.
-- `uv run pytest tests/ -q --ignore=tests/test_docker_golden.py`:
-  `255 passed, 1 skipped, 12 warnings`.
-- `uv run python scripts/ci_verify_generated_templates.py`:
-  `OK: generated template metadata gate covered 40 builders`.
-- `RUN_DOCKER_LEAN=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest uv run pytest tests/test_docker_golden.py -v --tb=short`:
-  `1 passed in 210.60s`.
-- `docker build -f Dockerfile -t lemma-runtime:ci-smoke .`: passed.
-- `uv run mypy lemma`: non-blocking quality gap,
-  `70 errors in 11 files`.
+- `uv sync --extra dev`
+- `uv run ruff check lemma tests tools`
+- `uv run pytest tests/ -q --ignore=tests/test_docker_golden.py`
+  (`255 passed, 1 skipped, 12 warnings`)
+- `uv run python scripts/ci_verify_generated_templates.py`
+- Docker golden Lean verify (`1 passed in 210.60s`)
+- `docker build -f Dockerfile -t lemma-runtime:ci-smoke .`
+
+Known quality gap:
+
+- `uv run mypy lemma` reports `70 errors in 11 files`.
 
 ## VPS Status Snapshot
 
-Do not deploy or restart services during the current docs/CI-fix pass.
+Do not deploy or restart services unless the user asks.
 
-- `lemma-lean-worker-1` (`167.99.145.132`):
-  - SSH responded with uptime.
-  - `/opt/lemma` deployed commit: `82bba8d`.
-  - Active services: `lemma-lean-worker-http.service`,
-    `lemma-validator.service`.
-- `lemma-miner-1` (`161.35.50.115`):
-  - SSH responded with uptime.
-  - `/opt/lemma` deployed commit: `82bba8d`.
-  - Active services: `lemma-miner.service`, `lemma-miner3.service`,
-    `lemma-miner4.service`, `lemma-miner5.service`, `lemma-miner6.service`,
-    `lemma-miner7.service`.
+Last checked state from the 2026-05-11 audit:
 
-Both droplets are alive but one commit behind `main` at `b7088f0`. This is
-record-only for the current pass.
+| Host | IP | Deployed commit | Running services |
+| --- | --- | --- | --- |
+| `lemma-lean-worker-1` | `167.99.145.132` | `82bba8d` | `lemma-lean-worker-http.service`, `lemma-validator.service` |
+| `lemma-miner-1` | `161.35.50.115` | `82bba8d` | `lemma-miner.service`, `lemma-miner3.service`, `lemma-miner4.service`, `lemma-miner5.service`, `lemma-miner6.service`, `lemma-miner7.service` |
+
+Both droplets were alive and services were active. They are behind current
+`main`.
 
 ## Where To Work
 
-- Active work tracker: [`docs/workplan.md`](docs/workplan.md).
-- Proof objective: [`docs/objective-decision.md`](docs/objective-decision.md).
-- Proof-verification incentives:
-  [`docs/proof-verification-incentives.md`](docs/proof-verification-incentives.md).
-- Testing commands: [`docs/testing.md`](docs/testing.md).
-- VPS/key custody: [`docs/vps-safety.md`](docs/vps-safety.md).
+- Active tracker: [docs/workplan.md](docs/workplan.md).
+- Objective: [docs/objective-decision.md](docs/objective-decision.md).
+- Proof rewards: [docs/proof-verification-incentives.md](docs/proof-verification-incentives.md).
+- Testing: [docs/testing.md](docs/testing.md).
+- VPS/key safety: [docs/vps-safety.md](docs/vps-safety.md).
 
 ## Rules For Future Agents
 
-- Preserve proof-verification language: pass or fail, binary system.
-- Keep `spacetime-tao/lemma` focused on consensus-critical code.
-- Keep friendly operator UX in `lemma-cli` unless the core repo needs a minimal
-  compatibility shim.
+- Preserve the proof-pass/fail reward language.
+- Keep `spacetime-tao/lemma` focused on core protocol and validation.
+- Put friendly operator UX in `lemma-cli` unless core needs a small shim.
 - Use tests and real logs before changing mechanism code.
-- Avoid defensive complexity where a simpler data model or call path can make
-  invalid states impossible.
+- Remove invalid states by simplifying the data model or call path where
+  possible.
