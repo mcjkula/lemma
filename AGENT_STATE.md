@@ -27,7 +27,7 @@ into the live reward path without a separate product decision.
 
 - Working checkout: `/Users/leehall/lemma`.
 - Local branch: `main` tracking `origin/main`.
-- Current local/GitHub `main` head after the audit-fix sequence:
+- Last CI-verified audit-fix head:
   `00e18051933b76b3d097956b79adeec236088711`
   (`Clarify proof eligibility versus allocation`).
 - Latest audit docs:
