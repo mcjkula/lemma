@@ -27,52 +27,36 @@ into the live reward path without a separate product decision.
 
 - Working checkout: `/Users/leehall/lemma`.
 - Local branch: `main` tracking `origin/main`.
-- Current local/GitHub head during this audit:
-  `b7088f00295fe0e23ad4a856ac43799b9acd8882`
-  (`Remove stale judge config from proof-only path`).
-- Current GitHub failure before this handoff update:
-  - CI run `25649757216` failed in `uv sync --extra dev`.
-  - Docker publish run `25649757232` failed in `pip install .`.
-  - Root cause: `pyproject.toml` added a direct-reference `cli` extra for
-    `lemma-cli` without Hatch metadata
-    `allow-direct-references = true`.
-- Local fix in this working tree: `[tool.hatch.metadata]`
-  `allow-direct-references = true`.
+- Current local/GitHub `main` head during the Codex audit:
+  `28bbbfc8c747c46ff5d6c5b0e015e5451aeb4e58`
+  (`Docs: add cursor-audit.md; CI gate pip-audit/bandit; production security note; README index`).
+- `git ls-remote origin HEAD refs/heads/main` matched local `main` at
+  `28bbbfc8c747c46ff5d6c5b0e015e5451aeb4e58`.
+- Latest audit docs:
+  - Cursor: [`docs/cursor-audit.md`](docs/cursor-audit.md), rating `7.5 / 10`.
+  - Codex: [`docs/codex-audit.md`](docs/codex-audit.md), rating `7.2 / 10`.
 
 ## Local Verification Snapshot
 
-Current local baseline after the metadata fix on 2026-05-11:
+Current local baseline from the Codex audit on 2026-05-11:
 
-- `uv sync --extra dev`: passed after sandbox escalation for the uv cache path.
-- `uv run ruff check lemma tests tools`: passed.
-- `uv run pytest tests/ -q --ignore=tests/test_docker_golden.py`:
-  `255 passed, 1 skipped, 12 warnings`.
-- `uv run python scripts/ci_verify_generated_templates.py`:
+- `.venv/bin/ruff check lemma tests tools`: passed.
+- `.venv/bin/mypy lemma`: passed,
+  `Success: no issues found in 68 source files`.
+- `.venv/bin/pytest tests -q`: passed,
+  `254 passed, 2 skipped, 12 warnings`.
+- `.venv/bin/python scripts/ci_verify_generated_templates.py`:
   `OK: generated template metadata gate covered 40 builders`.
-- `RUN_DOCKER_LEAN=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest uv run pytest tests/test_docker_golden.py -v --tb=short`:
-  `1 passed in 210.60s`.
-- `docker build -f Dockerfile -t lemma-runtime:ci-smoke .`: passed.
-- `uv run mypy lemma`: non-blocking quality gap,
-  `70 errors in 11 files`.
+- `.venv/bin/bandit -q -r lemma -ll`: passed with no medium/high findings.
+- `.venv/bin/pip-audit --ignore-vuln PYSEC-2025-49 --ignore-vuln PYSEC-2022-42969`:
+  passed with `No known vulnerabilities found, 3 ignored`.
+- Docker Lean golden was not rerun in this pass because the local Docker daemon
+  was unavailable at the configured socket.
 
 ## VPS Status Snapshot
 
-Do not deploy or restart services during the current docs/CI-fix pass.
-
-- `lemma-lean-worker-1` (`167.99.145.132`):
-  - SSH responded with uptime.
-  - `/opt/lemma` deployed commit: `82bba8d`.
-  - Active services: `lemma-lean-worker-http.service`,
-    `lemma-validator.service`.
-- `lemma-miner-1` (`161.35.50.115`):
-  - SSH responded with uptime.
-  - `/opt/lemma` deployed commit: `82bba8d`.
-  - Active services: `lemma-miner.service`, `lemma-miner3.service`,
-    `lemma-miner4.service`, `lemma-miner5.service`, `lemma-miner6.service`,
-    `lemma-miner7.service`.
-
-Both droplets are alive but one commit behind `main` at `b7088f0`. This is
-record-only for the current pass.
+No VPS deploy, restart, or SSH check was performed during the Codex audit doc
+pass. Treat older droplet snapshots as stale until refreshed from live hosts.
 
 ## Where To Work
 
@@ -87,8 +71,6 @@ record-only for the current pass.
 
 - Preserve proof-verification language: pass or fail, binary system.
 - Keep `spacetime-tao/lemma` focused on consensus-critical code.
-- Keep friendly operator UX in `lemma-cli` unless the core repo needs a minimal
-  compatibility shim.
 - Use tests and real logs before changing mechanism code.
 - Avoid defensive complexity where a simpler data model or call path can make
   invalid states impossible.
