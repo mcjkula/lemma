@@ -68,6 +68,7 @@ pass. Treat older droplet snapshots as stale until refreshed from live hosts.
 ## Rules For Future Agents
 
 - Preserve proof-verification language: pass or fail, binary system.
+- Keep binary proof eligibility separate from downstream allocation policy.
 - Keep `spacetime-tao/lemma` focused on consensus-critical code.
 - Use tests and real logs before changing mechanism code.
 - Avoid defensive complexity where a simpler data model or call path can make
