@@ -27,22 +27,22 @@ into the live reward path without a separate product decision.
 
 - Working checkout: `/Users/leehall/lemma`.
 - Local branch: `main` tracking `origin/main`.
-- Current `main` head before the validator inbound-limit fix:
-  `cba0fac41d40a272d49292f899a2c51071205c42`
-  (`Docs: add Codex audit and refresh tracker`).
+- Current `main` head before the remote worker safe-default fix:
+  `f06ab1ad1a94a9787c07ee39169f1e089fc2f939`
+  (`Refresh audit next steps after proof cap`).
 - Latest audit docs:
   - Cursor: [`docs/cursor-audit.md`](docs/cursor-audit.md), rating `7.5 / 10`.
   - Codex: [`docs/codex-audit.md`](docs/codex-audit.md), rating `7.2 / 10`.
 
 ## Local Verification Snapshot
 
-Current local baseline after the validator inbound-limit fix on 2026-05-11:
+Current local baseline after the remote worker safe-default fix on 2026-05-11:
 
 - `.venv/bin/ruff check lemma tests tools`: passed.
 - `.venv/bin/mypy lemma`: passed,
   `Success: no issues found in 69 source files`.
 - `.venv/bin/pytest tests -q`: passed,
-  `255 passed, 2 skipped, 12 warnings`.
+  `261 passed, 2 skipped, 12 warnings`.
 - `.venv/bin/python scripts/ci_verify_generated_templates.py`:
   `OK: generated template metadata gate covered 40 builders`.
 - `.venv/bin/bandit -q -r lemma -ll`: passed with no medium/high findings.
