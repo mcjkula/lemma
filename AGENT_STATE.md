@@ -36,25 +36,26 @@ into the live reward path without a separate product decision.
 
 ## Local Verification Snapshot
 
-Current local baseline after the remote worker safe-default fix on 2026-05-11:
+Current local baseline after the CI/display diagnostic fix on 2026-05-12:
 
-- `.venv/bin/ruff check lemma tests tools`: passed.
+- `.venv/bin/ruff check .`: passed.
 - `.venv/bin/mypy lemma`: passed,
   `Success: no issues found in 69 source files`.
-- `.venv/bin/pytest tests -q`: passed,
-  `261 passed, 2 skipped, 12 warnings`.
+- `.venv/bin/pytest -q`: passed,
+  `280 passed, 2 skipped, 12 warnings`.
 - `.venv/bin/python scripts/ci_verify_generated_templates.py`:
-  `OK: generated template metadata gate covered 40 builders`.
+  `OK: generated template metadata/witness gate covered 72 builders`.
 - `.venv/bin/bandit -q -r lemma -ll`: passed with no medium/high findings.
 - `.venv/bin/pip-audit --ignore-vuln PYSEC-2025-49 --ignore-vuln PYSEC-2022-42969`:
   passed with `No known vulnerabilities found, 3 ignored`.
-- GitHub Actions CI run
-  `https://github.com/spacetime-tao/lemma/actions/runs/25691630114`
-  passed on `00e1805`, including the `test` job and `docker-lean-sandbox`
-  job with Docker golden Lean verify and generated-template lake build.
-- The Docker image publish workflow passed on code commit `551b217`; the final
-  `00e1805` commit was docs-only. Local Docker golden/build could not run
-  because the Docker daemon socket was unavailable.
+- Latest checked GitHub Actions CI for `main` before this patch was
+  `https://github.com/spacetime-tao/lemma/actions/runs/25732798918` on
+  `5a9761d`: the `test` job passed, `docker-lean-sandbox` failed after the
+  generated-template witness multiplex, and the old automatic bisection
+  exhausted runner disk. This patch keeps bisection opt-in so the next run
+  preserves the real Lean output.
+- Local Docker golden/build could not run because the Docker daemon socket was
+  unavailable.
 
 ## VPS Status Snapshot
 
