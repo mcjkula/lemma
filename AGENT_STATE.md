@@ -29,19 +29,23 @@ into the live reward path without a separate product decision.
 - Local branch: `main` tracking `origin/main`.
 - Current local hardening batch: 2026-05-13 audit remediation, starting from
   `9546095` (`Track live ops hardening backlog`).
+- Last GitHub-confirmed audit head before the set_weights follow-up:
+  `2b0c076` (`Harden validator audit boundaries`), with `CI` and
+  `Build and Push Docker Image` passing on GitHub Actions.
 - Latest audit docs:
   - Cursor: [`docs/cursor-audit.md`](docs/cursor-audit.md), rating `7.5 / 10`.
   - Codex: [`docs/codex-audit.md`](docs/codex-audit.md), rating `8.4 / 10`.
 
 ## Local Verification Snapshot
 
-Current local baseline after the 2026-05-13 audit-remediation pass:
+Current local baseline after the 2026-05-13 audit-remediation pass and
+set_weights follow-up:
 
 - `.venv/bin/ruff check lemma tests tools`: passed.
 - `.venv/bin/mypy lemma`: passed,
   `Success: no issues found in 70 source files`.
 - `.venv/bin/pytest tests -q`: passed,
-  `307 passed, 2 skipped, 12 warnings`.
+  `310 passed, 2 skipped, 12 warnings`.
 - `.venv/bin/python scripts/ci_verify_generated_templates.py`:
   `OK: generated template metadata/witness gate covered 80 builders`.
 - `RUN_DOCKER_LEAN=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest .venv/bin/pytest tests/test_docker_golden.py -v --tb=short`:
@@ -70,6 +74,9 @@ Current local baseline after the 2026-05-13 audit-remediation pass:
   Lean proof failures.
 - Validator RPC/cadence errors stay inside the service loop; HTTP 429/rate-limit
   messages get a longer backoff.
+- `set_weights` result handling now treats tuple-style false returns and raised
+  RPC exceptions as failures, retries them, and logs a concrete final message
+  instead of `message=None`.
 - Public dashboard refreshes use `flock` and remain isolated from validator
   scoring.
 - Legacy `reasoning_only`, `LEMMA_JUDGE_PROFILE_ATTEST_*`,
@@ -78,8 +85,19 @@ Current local baseline after the 2026-05-13 audit-remediation pass:
 
 ## VPS Status Snapshot
 
-No VPS deploy, restart, or SSH check was performed during the local hardening
-pass. Treat older droplet snapshots as stale until refreshed from live hosts.
+Read-only SSH sampling on 2026-05-13 found both known Droplets still deployed at
+`d42addb`, not the newly pushed audit head. No deploy, restart, or service
+mutation was performed.
+
+- Validator / Lean worker `root@167.99.145.132`: `lemma-validator` and
+  `lemma-lean-worker-http` active; root/cache filesystem `33%` used; Lean worker
+  health returned `{"status": "ok"}`.
+- Miner host `root@161.35.50.115`: six miner services active, six axon ports
+  open, root filesystem `23%` used.
+- Fresh sampled validator round at `2026-05-13 06:44 UTC`:
+  `theorem_id=gen/7110900`, `verified=5`, `scored=5`, no reject counters,
+  `seconds=554.74`; `set_weights` then failed after retries with
+  `success=False message=None` on the old deployed code.
 
 ## Where To Work
 
