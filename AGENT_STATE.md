@@ -27,12 +27,14 @@ into the live reward path without a separate product decision.
 
 - Working checkout: `/Users/leehall/lemma`.
 - Local branch: `main` tracking `origin/main`.
-- Current local working batch: 2026-05-13 lemmasub.net dashboard plus read-only
-  droplet audit follow-up on top of `416c81e` (`Add extreme problem supply
-  split`).
-- Current deployed/GitHub-confirmed audit head:
-  `8067b70` (`Harden set_weights result handling`), with `CI` and
-  `Build and Push Docker Image` passing on GitHub Actions.
+- Latest pushed working batch: `d95411b` (`Normalize set_weights false-return
+  logs`) after the 2026-05-13 lemmasub.net dashboard plus read-only droplet
+  audit follow-up.
+- Current GitHub-confirmed head: `d95411b` (`Normalize set_weights
+  false-return logs`), with `CI` and `Build and Push Docker Image` passing on
+  GitHub Actions runs `25793209291` and `25793209296`.
+- Current testnet Droplet head: `8067b70` (`Harden set_weights result
+  handling`). The no-message set-weights logging cleanup is not deployed yet.
 - Latest audit docs:
   - Cursor: [`docs/cursor-audit.md`](docs/cursor-audit.md), rating `7.5 / 10`.
   - Codex: [`docs/codex-audit.md`](docs/codex-audit.md), rating `8.4 / 10`.
