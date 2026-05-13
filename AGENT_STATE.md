@@ -101,8 +101,14 @@ testnet Droplets to `0ff1068`.
   problem-supply pin to
   `f4ae425ad437c97b00d47b7ba97f97e1ff4cec8d5d66290c8b2364d91f822311`.
 - After the pin update and restart, validator logs showed
-  `problem_source=hybrid` and the expected registry hash. The next live task is
-  to watch the first full post-deploy rounds and record `set_weights` behavior.
+  `problem_source=hybrid` and the expected registry hash.
+- First observed post-`0ff1068` round completed at `2026-05-13 10:59 UTC`:
+  `theorem_id=gen/7112100`, split `medium`, `verified=5`, `scored=5`,
+  `verify_infra_errors=0`, no reject counters. `set_weights` returned false
+  after three attempts, but the deployed cleanup logged the operator-facing
+  message as `success=False without message` instead of `(False, None)`.
+- Next live task: watch follow-up rounds for successful `set_weights`,
+  reveal/emission movement, and any repeated false/no-message RPC pattern.
 
 ## Where To Work
 
