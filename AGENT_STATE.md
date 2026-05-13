@@ -29,8 +29,8 @@ into the live reward path without a separate product decision.
 - Local branch: `main` tracking `origin/main`.
 - Current local hardening batch: 2026-05-13 audit remediation, starting from
   `9546095` (`Track live ops hardening backlog`).
-- Last GitHub-confirmed audit head before the set_weights follow-up:
-  `2b0c076` (`Harden validator audit boundaries`), with `CI` and
+- Current deployed/GitHub-confirmed audit head:
+  `8067b70` (`Harden set_weights result handling`), with `CI` and
   `Build and Push Docker Image` passing on GitHub Actions.
 - Latest audit docs:
   - Cursor: [`docs/cursor-audit.md`](docs/cursor-audit.md), rating `7.5 / 10`.
@@ -85,19 +85,20 @@ set_weights follow-up:
 
 ## VPS Status Snapshot
 
-Read-only SSH sampling on 2026-05-13 found both known Droplets still deployed at
-`d42addb`, not the newly pushed audit head. No deploy, restart, or service
-mutation was performed.
+The known testnet Droplets were updated to `8067b70` on 2026-05-13 after the
+GitHub Actions run for that head passed. The validator was paused during the
+fast-forward deploy, miners and Lean worker were restarted, then the validator
+was started last.
 
-- Validator / Lean worker `root@167.99.145.132`: `lemma-validator` and
-  `lemma-lean-worker-http` active; root/cache filesystem `33%` used; Lean worker
-  health returned `{"status": "ok"}`.
-- Miner host `root@161.35.50.115`: six miner services active, six axon ports
-  open, root filesystem `23%` used.
-- Fresh sampled validator round at `2026-05-13 06:44 UTC`:
-  `theorem_id=gen/7110900`, `verified=5`, `scored=5`, no reject counters,
-  `seconds=554.74`; `set_weights` then failed after retries with
-  `success=False message=None` on the old deployed code.
+- Validator / Lean worker `root@167.99.145.132`: deployed `8067b70`;
+  `lemma-validator` and `lemma-lean-worker-http` active; root/cache filesystem
+  `38%` used; Lean worker health returned `{"status": "ok"}`.
+- Miner host `root@161.35.50.115`: deployed `8067b70`; six miner services
+  active; six axon ports open; root filesystem `23%` used.
+- First post-deploy validator round at `2026-05-13 07:30 UTC`:
+  `theorem_id=curated/foundations/list_append_nil_induction`, `verified=3`,
+  `scored=3`, `verify_infra_errors=0`, no reject counters, `seconds=369.99`,
+  and `set_weights success=True`.
 
 ## Where To Work
 
