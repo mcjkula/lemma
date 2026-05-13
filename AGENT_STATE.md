@@ -27,9 +27,9 @@ into the live reward path without a separate product decision.
 
 - Working checkout: `/Users/leehall/lemma`.
 - Local branch: `main` tracking `origin/main`.
-- Current local working batch: 2026-05-13 audit remediation plus the
-  uncommitted extreme-split problem-supply update on top of `3fabf9c`
-  (`Record droplet deploy evidence`).
+- Current local working batch: 2026-05-13 lemmasub.net dashboard plus read-only
+  droplet audit follow-up on top of `416c81e` (`Add extreme problem supply
+  split`).
 - Current deployed/GitHub-confirmed audit head:
   `8067b70` (`Harden set_weights result handling`), with `CI` and
   `Build and Push Docker Image` passing on GitHub Actions.
@@ -72,26 +72,31 @@ Current local baseline after the 2026-05-13 extreme-split problem-supply update:
   instead of `message=None`.
 - Public dashboard refreshes use `flock` and remain isolated from validator
   scoring.
+- Set-weights false returns without an RPC message now log
+  `success=False without message` instead of tuple noise such as
+  `(False, None)`.
 - Legacy `reasoning_only`, `LEMMA_JUDGE_PROFILE_ATTEST_*`,
   `JUDGE_PROFILE_SHA256_EXPECTED`, and `/lemma/judge_profile_sha256` surfaces
   are retired.
 
 ## VPS Status Snapshot
 
-The known testnet Droplets were updated to `8067b70` on 2026-05-13 after the
-GitHub Actions run for that head passed. The validator was paused during the
-fast-forward deploy, miners and Lean worker were restarted, then the validator
-was started last.
+Read-only sampling on 2026-05-13 at about 10:18 UTC found the known testnet
+Droplets still on deployed commit `8067b70`. No services were restarted or
+changed during this audit.
 
 - Validator / Lean worker `root@167.99.145.132`: deployed `8067b70`;
   `lemma-validator` and `lemma-lean-worker-http` active; root/cache filesystem
-  `38%` used; Lean worker health returned `{"status": "ok"}`.
+  `28%` used; Lean worker health on `127.0.0.1:8787` returned
+  `{"status": "ok"}`; public dashboard timer enabled/running and the service
+  completed successful refresh commits through `9c31c1e`.
 - Miner host `root@161.35.50.115`: deployed `8067b70`; six miner services
-  active; six axon ports open; root filesystem `23%` used.
-- First post-deploy validator round at `2026-05-13 07:30 UTC`:
-  `theorem_id=curated/foundations/list_append_nil_induction`, `verified=3`,
-  `scored=3`, `verify_infra_errors=0`, no reject counters, `seconds=369.99`,
-  and `set_weights success=True`.
+  active; root filesystem `23%` used.
+- Latest sampled validator round at `2026-05-13 10:04 UTC` verified/scored
+  `4` proofs with `verify_infra_errors=0` and `set_weights success=True`.
+  Earlier rounds still showed intermittent `set_weights success=False
+  message=(False, None)` from the deployed code. The local follow-up patch
+  normalizes that message; it is not deployed yet.
 
 ## Where To Work
 
