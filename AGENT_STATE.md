@@ -27,8 +27,9 @@ into the live reward path without a separate product decision.
 
 - Working checkout: `/Users/leehall/lemma`.
 - Local branch: `main` tracking `origin/main`.
-- Current local hardening batch: 2026-05-13 audit remediation, starting from
-  `9546095` (`Track live ops hardening backlog`).
+- Current local working batch: 2026-05-13 audit remediation plus the
+  uncommitted extreme-split problem-supply update on top of `3fabf9c`
+  (`Record droplet deploy evidence`).
 - Current deployed/GitHub-confirmed audit head:
   `8067b70` (`Harden set_weights result handling`), with `CI` and
   `Build and Push Docker Image` passing on GitHub Actions.
@@ -38,26 +39,18 @@ into the live reward path without a separate product decision.
 
 ## Local Verification Snapshot
 
-Current local baseline after the 2026-05-13 audit-remediation pass and
-set_weights follow-up:
+Current local baseline after the 2026-05-13 extreme-split problem-supply update:
 
 - `.venv/bin/ruff check lemma tests tools`: passed.
 - `.venv/bin/mypy lemma`: passed,
   `Success: no issues found in 70 source files`.
 - `.venv/bin/pytest tests -q`: passed,
-  `310 passed, 2 skipped, 12 warnings`.
+  `314 passed, 2 skipped, 12 warnings`.
 - `.venv/bin/python scripts/ci_verify_generated_templates.py`:
-  `OK: generated template metadata/witness gate covered 80 builders`.
-- `RUN_DOCKER_LEAN=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest .venv/bin/pytest tests/test_docker_golden.py -v --tb=short`:
-  passed, `1 passed in 208.57s`.
+  `OK: generated template metadata/witness gate covered 85 builders`.
 - `RUN_DOCKER_LEAN_TEMPLATES=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest .venv/bin/python scripts/ci_verify_generated_templates.py`:
-  passed; all 80 generated template stubs and witnesses built in one Docker
+  passed; all 85 generated template stubs and witnesses built in one Docker
   workspace.
-- `docker build -f Dockerfile -t lemma-runtime:ci-smoke .`: passed.
-- `.venv/bin/bandit -q -r lemma -ll`: passed with no medium/high findings.
-- `.venv/bin/bandit -q -r lemma`: 20 low-severity findings only.
-- `.venv/bin/pip-audit --ignore-vuln PYSEC-2025-49 --ignore-vuln PYSEC-2022-42969`:
-  passed with `No known vulnerabilities found, 3 ignored`.
 
 ## Recently Closed
 
