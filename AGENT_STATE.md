@@ -27,39 +27,58 @@ into the live reward path without a separate product decision.
 
 - Working checkout: `/Users/leehall/lemma`.
 - Local branch: `main` tracking `origin/main`.
-- Last CI-verified audit-fix head:
-  `00e18051933b76b3d097956b79adeec236088711`
-  (`Clarify proof eligibility versus allocation`).
+- Current local hardening batch: 2026-05-13 audit remediation, starting from
+  `9546095` (`Track live ops hardening backlog`).
 - Latest audit docs:
   - Cursor: [`docs/cursor-audit.md`](docs/cursor-audit.md), rating `7.5 / 10`.
-  - Codex: [`docs/codex-audit.md`](docs/codex-audit.md), rating `7.2 / 10`.
+  - Codex: [`docs/codex-audit.md`](docs/codex-audit.md), rating `8.4 / 10`.
 
 ## Local Verification Snapshot
 
-Current local baseline after the CI/display diagnostic fix on 2026-05-12:
+Current local baseline after the 2026-05-13 audit-remediation pass:
 
-- `.venv/bin/ruff check .`: passed.
+- `.venv/bin/ruff check lemma tests tools`: passed.
 - `.venv/bin/mypy lemma`: passed,
-  `Success: no issues found in 69 source files`.
-- `.venv/bin/pytest -q`: passed,
-  `280 passed, 2 skipped, 12 warnings`.
+  `Success: no issues found in 70 source files`.
+- `.venv/bin/pytest tests -q`: passed,
+  `307 passed, 2 skipped, 12 warnings`.
 - `.venv/bin/python scripts/ci_verify_generated_templates.py`:
-  `OK: generated template metadata/witness gate covered 72 builders`.
+  `OK: generated template metadata/witness gate covered 80 builders`.
+- `RUN_DOCKER_LEAN=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest .venv/bin/pytest tests/test_docker_golden.py -v --tb=short`:
+  passed, `1 passed in 208.57s`.
+- `RUN_DOCKER_LEAN_TEMPLATES=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest .venv/bin/python scripts/ci_verify_generated_templates.py`:
+  passed; all 80 generated template stubs and witnesses built in one Docker
+  workspace.
+- `docker build -f Dockerfile -t lemma-runtime:ci-smoke .`: passed.
 - `.venv/bin/bandit -q -r lemma -ll`: passed with no medium/high findings.
+- `.venv/bin/bandit -q -r lemma`: 20 low-severity findings only.
 - `.venv/bin/pip-audit --ignore-vuln PYSEC-2025-49 --ignore-vuln PYSEC-2022-42969`:
   passed with `No known vulnerabilities found, 3 ignored`.
-- Latest checked GitHub Actions CI for `main` before this patch was
-  `https://github.com/spacetime-tao/lemma/actions/runs/25732798918` on
-  `5a9761d`: the `test` job passed, `docker-lean-sandbox` failed after the
-  generated-template witness multiplex, and the old automatic bisection
-  exhausted runner disk. This patch keeps bisection opt-in so the next run
-  preserves the real Lean output.
-- Local Docker golden/build could not run because the Docker daemon socket was
-  unavailable.
+
+## Recently Closed
+
+- Export write failures are non-fatal after scoring; `set_weights` still runs
+  when scores are already known.
+- `LEMMA_VALIDATOR_MIN_FREE_BYTES` skips validator epochs before miner queries
+  if root/cache disk space is too low.
+- `LEMMA_LEAN_WORKSPACE_CACHE_MAX_BYTES` bounds total warm Lean workspace cache
+  size in addition to the existing directory cap.
+- Verifier-local `timeout`, `oom`, `docker_error`, and `remote_error` results
+  are counted/exported as validator infra failures and do not downgrade miner
+  verify credibility like ordinary proof failures.
+- All-fail proof epochs now persist verify-credibility downgrades for ordinary
+  Lean proof failures.
+- Validator RPC/cadence errors stay inside the service loop; HTTP 429/rate-limit
+  messages get a longer backoff.
+- Public dashboard refreshes use `flock` and remain isolated from validator
+  scoring.
+- Legacy `reasoning_only`, `LEMMA_JUDGE_PROFILE_ATTEST_*`,
+  `JUDGE_PROFILE_SHA256_EXPECTED`, and `/lemma/judge_profile_sha256` surfaces
+  are retired.
 
 ## VPS Status Snapshot
 
-No VPS deploy, restart, or SSH check was performed during the Codex audit doc
+No VPS deploy, restart, or SSH check was performed during the local hardening
 pass. Treat older droplet snapshots as stale until refreshed from live hosts.
 
 ## Where To Work
