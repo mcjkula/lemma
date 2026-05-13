@@ -27,14 +27,15 @@ into the live reward path without a separate product decision.
 
 - Working checkout: `/Users/leehall/lemma`.
 - Local branch: `main` tracking `origin/main`.
-- Latest pushed working batch: `d95411b` (`Normalize set_weights false-return
-  logs`) after the 2026-05-13 lemmasub.net dashboard plus read-only droplet
-  audit follow-up.
-- Current GitHub-confirmed head: `d95411b` (`Normalize set_weights
-  false-return logs`), with `CI` and `Build and Push Docker Image` passing on
-  GitHub Actions runs `25793209291` and `25793209296`.
-- Current testnet Droplet head: `8067b70` (`Harden set_weights result
-  handling`). The no-message set-weights logging cleanup is not deployed yet.
+- Latest runtime batch covered by this handoff: `0ff1068` (`Record CI evidence
+  for set_weights cleanup`) after the 2026-05-13 lemmasub.net dashboard plus
+  droplet audit follow-up.
+- Latest GitHub-confirmed runtime head: `0ff1068` (`Record CI evidence for
+  set_weights cleanup`), with `CI` passing on GitHub Actions run
+  `25793725075`. The preceding code commit `d95411b` also had `CI` and
+  `Build and Push Docker Image` passing on runs `25793209291` and
+  `25793209296`.
+- Current testnet Droplet head: `0ff1068` on both known hosts.
 - Latest audit docs:
   - Cursor: [`docs/cursor-audit.md`](docs/cursor-audit.md), rating `7.5 / 10`.
   - Codex: [`docs/codex-audit.md`](docs/codex-audit.md), rating `8.4 / 10`.
@@ -83,22 +84,25 @@ Current local baseline after the 2026-05-13 extreme-split problem-supply update:
 
 ## VPS Status Snapshot
 
-Read-only sampling on 2026-05-13 at about 10:18 UTC found the known testnet
-Droplets still on deployed commit `8067b70`. No services were restarted or
-changed during this audit.
+Read-only sampling plus the follow-up deploy on 2026-05-13 moved both known
+testnet Droplets to `0ff1068`.
 
-- Validator / Lean worker `root@167.99.145.132`: deployed `8067b70`;
-  `lemma-validator` and `lemma-lean-worker-http` active; root/cache filesystem
-  `28%` used; Lean worker health on `127.0.0.1:8787` returned
-  `{"status": "ok"}`; public dashboard timer enabled/running and the service
-  completed successful refresh commits through `9c31c1e`.
-- Miner host `root@161.35.50.115`: deployed `8067b70`; six miner services
-  active; root filesystem `23%` used.
-- Latest sampled validator round at `2026-05-13 10:04 UTC` verified/scored
-  `4` proofs with `verify_infra_errors=0` and `set_weights success=True`.
-  Earlier rounds still showed intermittent `set_weights success=False
-  message=(False, None)` from the deployed code. The local follow-up patch
-  normalizes that message; it is not deployed yet.
+- Validator / Lean worker `root@167.99.145.132`: deployed `0ff1068`;
+  `lemma-validator`, `lemma-lean-worker-http`, and
+  `lemma-public-dashboard.timer` active; Lean worker health on
+  `127.0.0.1:8787` returned `{"status": "ok"}`.
+- Miner host `root@161.35.50.115`: deployed `0ff1068`; six miner services
+  active.
+- During the deploy, the validator failed closed on stale subnet pins after the
+  extreme split changed the validator profile. Running
+  `lemma configure subnet-pins --env-file /opt/lemma/.env --yes` on the
+  validator host updated the profile pin to
+  `85155229a2c1a0dd9537434d89a7c924368f888e4602b6d909757b09285b0a9c` and the
+  problem-supply pin to
+  `f4ae425ad437c97b00d47b7ba97f97e1ff4cec8d5d66290c8b2364d91f822311`.
+- After the pin update and restart, validator logs showed
+  `problem_source=hybrid` and the expected registry hash. The next live task is
+  to watch the first full post-deploy rounds and record `set_weights` behavior.
 
 ## Where To Work
 
