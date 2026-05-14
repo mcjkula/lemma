@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
+import bittensor
 from loguru import logger
 
 ProblemSeedMode = Literal["quantize", "subnet_epoch"]
@@ -38,10 +39,9 @@ def subnet_epoch_index_seed(chain_head_block: int, netuid: int, tempo: int) -> i
 
 
 def resolve_problem_seed(*, chain_head_block: int, netuid: int, mode: ProblemSeedMode,
-                         quantize_blocks: int, subtensor: object) -> tuple[int, str]:
+                         quantize_blocks: int, subtensor: bittensor.Subtensor) -> tuple[int, str]:
     if mode == "subnet_epoch":
-        tempo_fn = getattr(subtensor, "tempo", None)
-        tempo = tempo_fn(netuid, block=chain_head_block) if callable(tempo_fn) else None
+        tempo = subtensor.tempo(netuid, block=chain_head_block)
         if tempo is None:
             return problem_sample_seed_block(chain_head_block, quantize_blocks), "quantize_fallback_no_tempo"
         return subnet_epoch_index_seed(chain_head_block, netuid, int(tempo)), "subnet_epoch"
@@ -50,15 +50,14 @@ def resolve_problem_seed(*, chain_head_block: int, netuid: int, mode: ProblemSee
 
 def blocks_until_challenge_may_change(*, chain_head_block: int, netuid: int,
                                        mode: ProblemSeedMode | str, quantize_blocks: int,
-                                       seed_tag: str, subtensor: object) -> tuple[int, str]:
+                                       seed_tag: str, subtensor: bittensor.Subtensor) -> tuple[int, str]:
     if (mode or "").strip().lower() == "quantize" or (seed_tag or "").strip().lower() == "quantize_fallback_no_tempo":
         return blocks_until_quantize_boundary(chain_head_block, quantize_blocks), "quantize_window"
-    bu_fn = getattr(subtensor, "blocks_until_next_epoch", None)
-    if callable(bu_fn):
-        try:
-            bu = bu_fn(netuid)
-            if bu is not None:
-                return max(1, int(bu)), "subnet_epoch"
-        except Exception as e:
-            logger.debug("blocks_until_next_epoch failed netuid={}: {}", netuid, e)
+    try:
+        bu = subtensor.blocks_until_next_epoch(netuid)
+    except Exception as e:  # noqa: BLE001
+        logger.debug("blocks_until_next_epoch failed netuid={}: {}", netuid, e)
+        bu = None
+    if bu is not None:
+        return max(1, int(bu)), "subnet_epoch"
     return blocks_until_quantize_boundary(chain_head_block, quantize_blocks), "quantize_estimate"
