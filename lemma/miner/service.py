@@ -17,11 +17,9 @@ from lemma.transport.server import RequestContext, verify_epistula
 
 
 def build_app(
-    settings: LemmaSettings,
     wallet: bittensor.Wallet,
     *,
     solver: Solver | None = None,
-    subtensor: object | None = None,
 ) -> FastAPI:
     app = FastAPI()
     receiver_ss58 = wallet.hotkey.ss58_address
@@ -32,9 +30,7 @@ def build_app(
     @app.post("/lemma/commit")
     async def commit(ctx: RequestContext = Depends(_verify)) -> Response:
         payload = from_json(ChallengePayload, ctx.body)
-        reply = await handle_commit(
-            payload, solver=solver, subtensor=subtensor, wallet=wallet, netuid=settings.netuid,
-        )
+        reply = await handle_commit(payload, solver=solver)
         return Response(to_json(reply), media_type="application/json")
 
     @app.post("/lemma/reveal")
@@ -67,6 +63,6 @@ class MinerService:
             )
         logger.info("Miner HTTP listening port={} hotkey={}", s.axon_port, wallet.hotkey.ss58_address)
         uvicorn.run(
-            build_app(s, wallet, subtensor=subtensor),
+            build_app(wallet),
             host="0.0.0.0", port=s.axon_port, log_level=s.log_level.lower(),
         )
