@@ -19,7 +19,7 @@ from lemma.common.subtensor import get_subtensor
 from lemma.lean.sandbox import VerifyResult
 from lemma.lean.verify_runner import run_lean_verify
 from lemma.problems.base import Problem
-from lemma.protocol import ChallengePayload, RevealPayload
+from lemma.protocol import ChallengePayload, RevealPayload, from_json, to_json
 from lemma.scoring.champion_decay import apply_decay
 from lemma.scoring.dedup import submission_fingerprint
 from lemma.scoring.first_to_solve import Solve, rank_solvers
@@ -98,7 +98,7 @@ async def _query_one(
     if r.status_code != 200:
         return None
     try:
-        return RevealPayload.model_validate_json(r.content)
+        return from_json(RevealPayload, r.content)
     except (ValueError, TypeError):
         return None
 
@@ -112,7 +112,7 @@ async def _broadcast_theorem(
     challenge: ChallengePayload,
     timeout_s: float,
 ) -> dict[int, RevealPayload]:
-    body = challenge.model_dump_json().encode("utf-8")
+    body = to_json(challenge)
     sem = asyncio.Semaphore(max(1, settings.lemma_lean_verify_max_concurrent * 2))
 
     async def _one(uid: int) -> tuple[int, RevealPayload | None]:

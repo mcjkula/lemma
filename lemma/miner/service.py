@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import bittensor
 import uvicorn
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, Request, Response
 from loguru import logger
 
 from lemma.common.config import LemmaSettings
@@ -12,7 +12,7 @@ from lemma.common.logging import setup_logging
 from lemma.common.subtensor import get_subtensor
 from lemma.miner.forward import Solver, handle_commit, handle_reveal
 from lemma.miner.public_ip import discover_public_ipv4
-from lemma.protocol import ChallengePayload, CommitPayload, RevealPayload, VerifyReply
+from lemma.protocol import ChallengePayload, VerifyReply, from_json, to_json
 from lemma.transport.server import RequestContext, verify_epistula
 
 
@@ -28,17 +28,21 @@ def build_app(
     async def _verify(request: Request) -> RequestContext:
         return await verify_epistula(request, receiver_ss58)
 
-    @app.post("/lemma/commit", response_model=CommitPayload)
-    async def commit(payload: ChallengePayload, _: RequestContext = Depends(_verify)) -> CommitPayload:
-        return await handle_commit(payload, solver=solver)
+    @app.post("/lemma/commit")
+    async def commit(ctx: RequestContext = Depends(_verify)) -> Response:
+        payload = from_json(ChallengePayload, ctx.body)
+        reply = await handle_commit(payload, solver=solver)
+        return Response(to_json(reply), media_type="application/json")
 
-    @app.post("/lemma/reveal", response_model=RevealPayload)
-    async def reveal(payload: ChallengePayload, _: RequestContext = Depends(_verify)) -> RevealPayload:
-        return await handle_reveal(payload, solver=solver)
+    @app.post("/lemma/reveal")
+    async def reveal(ctx: RequestContext = Depends(_verify)) -> Response:
+        payload = from_json(ChallengePayload, ctx.body)
+        reply = await handle_reveal(payload, solver=solver)
+        return Response(to_json(reply), media_type="application/json")
 
-    @app.get("/lemma/health", response_model=VerifyReply)
-    async def health() -> VerifyReply:
-        return VerifyReply(accepted=True)
+    @app.get("/lemma/health")
+    async def health() -> Response:
+        return Response(to_json(VerifyReply(accepted=True)), media_type="application/json")
 
     return app
 
@@ -55,17 +59,8 @@ class MinerService:
         external_ip = (s.axon_external_ip or "").strip() or discover_public_ipv4()
         if external_ip:
             bittensor.serve_extrinsic(
-                subtensor=subtensor,
-                wallet=wallet,
-                ip=external_ip,
-                port=s.axon_port,
-                protocol=4,
-                netuid=s.netuid,
+                subtensor=subtensor, wallet=wallet, ip=external_ip,
+                port=s.axon_port, protocol=4, netuid=s.netuid,
             )
-        logger.info(
-            "Miner HTTP listening port={} hotkey={}",
-            s.axon_port,
-            wallet.hotkey.ss58_address,
-        )
-        app = build_app(s, wallet)
-        uvicorn.run(app, host="0.0.0.0", port=s.axon_port, log_level=s.log_level.lower())
+        logger.info("Miner HTTP listening port={} hotkey={}", s.axon_port, wallet.hotkey.ss58_address)
+        uvicorn.run(build_app(s, wallet), host="0.0.0.0", port=s.axon_port, log_level=s.log_level.lower())
