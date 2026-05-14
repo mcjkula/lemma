@@ -79,15 +79,16 @@ def corpus_group(ctx: click.Context) -> None:
 @corpus_group.command("push")
 @click.argument("destination")
 def corpus_push_cmd(destination: str) -> None:
-    """Mirror ``~/.lemma/corpus/`` to ``s3://bucket/prefix``."""
+    """Mirror ``~/.lemma/corpus/`` to ``s3://bucket/prefix`` via ``aws s3 sync``."""
     from lemma.validator.corpus import publish_to_s3
 
-    raise SystemExit(publish_to_s3(destination))
+    rc = publish_to_s3(destination)
+    raise SystemExit(rc)
 
 
 @main.command("weights")
 def weights_cmd() -> None:
-    """Print chain head and netuid."""
+    """Print chain head and netuid (debug)."""
     from lemma.common.subtensor import get_subtensor
 
     settings = LemmaSettings()
@@ -96,7 +97,8 @@ def weights_cmd() -> None:
     except Exception as e:  # noqa: BLE001
         click.echo(f"chain RPC failed: {e}", err=True)
         raise SystemExit(2) from e
-    click.echo(f"chain_head={head}\nnetuid={settings.netuid}")
+    click.echo(f"chain_head={head}")
+    click.echo(f"netuid={settings.netuid}")
 
 
 if __name__ == "__main__":
