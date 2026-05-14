@@ -60,9 +60,7 @@ class LemmaSettings(BaseSettings):
     lean_verify_timeout_s: int = Field(
         default=180, ge=10, le=3600, validation_alias="LEAN_VERIFY_TIMEOUT_S",
     )
-    lemma_lean_docker_worker: str | None = Field(
-        default=None, validation_alias="LEMMA_LEAN_DOCKER_WORKER",
-    )
+    lemma_lean_docker_worker: str = Field(default="", validation_alias="LEMMA_LEAN_DOCKER_WORKER")
     lemma_lean_verify_max_concurrent: int = Field(
         default=4, ge=1, le=64, validation_alias="LEMMA_LEAN_VERIFY_MAX_CONCURRENT",
     )

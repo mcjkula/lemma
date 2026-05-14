@@ -17,10 +17,10 @@ def get_subtensor(settings: LemmaSettings) -> bittensor.Subtensor:
 
 def resolve_burn_uid(metagraph: bittensor.Metagraph) -> int:
     """UID of the subnet owner. The chain guarantees the owner is registered and immune."""
-    ss58 = (metagraph.owner_hotkey or "").strip()
-    if not ss58:
+    ss58 = metagraph.owner_hotkey
+    if ss58 is None or not ss58.strip():
         raise BurnUidUnavailable("metagraph.owner_hotkey is empty")
     try:
-        return metagraph.hotkeys.index(ss58)
+        return metagraph.hotkeys.index(ss58.strip())
     except ValueError as e:
         raise BurnUidUnavailable(f"owner {ss58!r} not in metagraph.hotkeys") from e

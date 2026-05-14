@@ -58,7 +58,7 @@ def run_doctor() -> int:
     )
 
     click.echo(stylize("\n3  Lean sandbox", fg="cyan", bold=True))
-    worker = (settings.lemma_lean_docker_worker or "").strip()
+    worker = settings.lemma_lean_docker_worker.strip()
     if worker:
         click.echo(stylize("   OK", fg="green") + f"    LEMMA_LEAN_DOCKER_WORKER={worker!r}")
     else:

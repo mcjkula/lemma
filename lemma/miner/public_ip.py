@@ -7,16 +7,16 @@ import ipaddress
 import httpx
 from loguru import logger
 
-_IP_SOURCES = (
+_IP_SOURCES: tuple[tuple[str, dict[str, str]], ...] = (
     ("https://api.ipify.org", {"format": "text"}),
-    ("https://icanhazip.com", None),
+    ("https://icanhazip.com", {}),
 )
 
 
 def discover_public_ipv4(timeout_s: float = 5.0) -> str | None:
     for url, params in _IP_SOURCES:
         try:
-            r = httpx.get(url, params=params or {}, timeout=timeout_s)
+            r = httpx.get(url, params=params, timeout=timeout_s)
             r.raise_for_status()
             ip = r.text.strip().split()[0]
             ipaddress.IPv4Address(ip)

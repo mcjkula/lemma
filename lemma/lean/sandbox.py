@@ -8,9 +8,8 @@ import subprocess
 import tarfile
 import time
 import uuid
+from dataclasses import dataclass
 from typing import Literal
-
-from pydantic import BaseModel
 
 from lemma.lean.cheats import (
     axiom_scan_ok,
@@ -57,9 +56,11 @@ done
 VerifyReason = Literal[
     "ok", "compile_error", "axiom_violation", "cheat_token", "timeout", "oom", "docker_error",
 ]
+_PUBLISHABLE: frozenset[VerifyReason] = frozenset({"ok", "compile_error", "axiom_violation", "cheat_token"})
 
 
-class VerifyResult(BaseModel):
+@dataclass(frozen=True, slots=True)
+class VerifyResult:
     passed: bool
     reason: VerifyReason
     stderr_tail: str = ""
@@ -117,14 +118,14 @@ class LeanSandbox:
         self._sh(f"rm -rf {shlex.quote(tmp)} && mkdir -p {shlex.quote(tmp)}")
         self._write(tmp, files)
         vr = self._run(tmp)
-        if vr.reason in {"timeout", "oom", "docker_error"}:
-            self._sh(f"rm -rf {shlex.quote(tmp)}", check=False)
-        else:
+        if vr.reason in _PUBLISHABLE:
             self._sh(
                 f"if [ ! -e {shlex.quote(slot)} ]; then mv {shlex.quote(tmp)} {shlex.quote(slot)}; "
                 f"else rm -rf {shlex.quote(tmp)}; fi",
             )
             self._prune(cache_key)
+            return vr
+        self._sh(f"rm -rf {shlex.quote(tmp)}", check=False)
         return vr
 
     def _sh(self, bash: str, *, check: bool = True) -> subprocess.CompletedProcess[str]:

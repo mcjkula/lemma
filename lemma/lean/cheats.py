@@ -11,10 +11,10 @@ _AXIOM_DECL = re.compile(r"^\s*axiom\s+\w+", re.MULTILINE)
 ALLOWED_AXIOMS = frozenset({"propext", "Quot.sound", "Classical.choice"})
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class CheatScan:
     ok: bool
-    reason: str | None = None
+    reason: str = ""
 
 
 def scan_submission_for_cheats(source: str) -> CheatScan:
@@ -25,15 +25,16 @@ def scan_submission_for_cheats(source: str) -> CheatScan:
     return CheatScan(True)
 
 
+_CHEAT_HINTS = {
+    "forbidden_token": " — remove `sorry`, `admit`, `unsafe`, … from Submission.lean (completed proof only).",
+    "user_axiom": " — do not declare new `axiom`s in Submission.lean.",
+}
+
+
 def cheat_scan_stderr_tail(scan: CheatScan, *, max_len: int = 8000) -> str:
     if scan.ok:
         return ""
-    tail = scan.reason or ""
-    if tail == "forbidden_token":
-        tail += " — remove `sorry`, `admit`, `unsafe`, … from Submission.lean (completed proof only)."
-    elif tail == "user_axiom":
-        tail += " — do not declare new `axiom`s in Submission.lean."
-    return tail[:max_len]
+    return (scan.reason + _CHEAT_HINTS.get(scan.reason, ""))[:max_len]
 
 
 def parse_axioms_from_lean_output(text: str) -> set[str] | None:

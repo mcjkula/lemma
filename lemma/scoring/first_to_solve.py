@@ -24,7 +24,7 @@ def rank_solvers(
     for theorem_id, group in by_theorem.items():
         ordered = sorted(
             group,
-            key=lambda s: (s.commit_block, registration_block.get(s.miner_uid, 1 << 31), s.miner_uid),
+            key=lambda s: (s.commit_block, registration_block[s.miner_uid], s.miner_uid),
         )
         for i, s in enumerate(ordered):
             ranks[(theorem_id, s.miner_uid)] = i

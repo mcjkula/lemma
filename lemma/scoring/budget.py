@@ -29,11 +29,11 @@ def compute_budget(
 
     rewards: dict[int, dict[str, float]] = {}
     for tid, uids in solved_by_theorem.items():
-        r0 = base_reward(fractions.get(tid, 0.0))
+        r0 = base_reward(fractions[tid])
         if r0 <= 0.0:
             continue
         for uid in uids:
-            rank = ranks.get((tid, uid), MAX_RANK_PAID)
+            rank = ranks[(tid, uid)]
             if rank < MAX_RANK_PAID:
                 rewards.setdefault(uid, {})[tid] = r0 * (RANK_DECAY ** rank)
 

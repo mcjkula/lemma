@@ -21,7 +21,9 @@ class CorpusEntry:
 
 
 def _resolve(root: Path | None) -> Path:
-    return root or Path.home() / ".lemma" / "corpus"
+    if root is None:
+        return Path.home() / ".lemma" / "corpus"
+    return root
 
 
 def append(entries: list[CorpusEntry], *, root: Path | None = None) -> Path:

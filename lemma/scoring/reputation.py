@@ -13,7 +13,9 @@ class ReputationStore:
 
 
 def _resolve(path: Path | None) -> Path:
-    return path or Path.home() / ".lemma" / "validator_reputation.json"
+    if path is None:
+        return Path.home() / ".lemma" / "validator_reputation.json"
+    return path
 
 
 def load_reputation(path: Path | None) -> ReputationStore:
@@ -22,7 +24,7 @@ def load_reputation(path: Path | None) -> ReputationStore:
         return ReputationStore()
     data = json.loads(p.read_text(encoding="utf-8"))
     return ReputationStore(
-        reign_by_uid={int(k): int(v) for k, v in data.get("reign_by_uid", {}).items()},
+        reign_by_uid={int(k): int(v) for k, v in data["reign_by_uid"].items()},
     )
 
 
