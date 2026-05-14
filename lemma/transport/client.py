@@ -87,6 +87,6 @@ async def broadcast_challenge(
             out[uid] = reply
 
     async with asyncio.TaskGroup() as tg:
-        for uid in range(int(metagraph.n)):
+        for uid in range(metagraph.n.item()):
             tg.create_task(_one(uid))
     return out

@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 def _registration_blocks(metagraph: bittensor.Metagraph) -> dict[int, int]:
     blocks = metagraph.block_at_registration
-    return {uid: int(blocks[uid]) for uid in range(int(metagraph.n))}
+    return {uid: int(blocks[uid]) for uid in range(metagraph.n.item())}
 
 
 async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[int, float]:
@@ -34,7 +34,7 @@ async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[i
     wallet = bittensor.Wallet(name=settings.wallet_cold, hotkey=settings.wallet_hot)
     subtensor = get_subtensor(settings)
     metagraph = subtensor.metagraph(settings.netuid)
-    n = int(metagraph.n)
+    n = metagraph.n.item()
     cur_block = int(subtensor.get_current_block())
     problem_seed, _tag = resolve_problem_seed(
         chain_head_block=effective_chain_head_for_problem_seed(
