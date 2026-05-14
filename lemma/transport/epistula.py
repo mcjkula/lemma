@@ -42,14 +42,15 @@ class EpistulaHeaders:
 
     @classmethod
     def from_http_headers(cls, h: dict[str, str]) -> EpistulaHeaders | None:
+        lower = {k.lower(): v for k, v in h.items()}
         try:
             return cls(
-                version=h["Epistula-Version"],
-                timestamp_ms=h["Epistula-Timestamp"],
-                uuid=h["Epistula-Uuid"],
-                signed_for=h["Epistula-Signed-For"],
-                signed_by=h["Epistula-Signed-By"],
-                signature_hex=h["Epistula-Request-Signature"],
+                version=lower["epistula-version"],
+                timestamp_ms=lower["epistula-timestamp"],
+                uuid=lower["epistula-uuid"],
+                signed_for=lower["epistula-signed-for"],
+                signed_by=lower["epistula-signed-by"],
+                signature_hex=lower["epistula-request-signature"],
             )
         except KeyError:
             return None

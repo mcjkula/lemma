@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from fastapi import Header, HTTPException, Request
+from fastapi import HTTPException, Request
 
 from lemma.transport.epistula import EpistulaHeaders, ReplayCache, verify
 
@@ -17,25 +17,11 @@ class RequestContext:
     body: bytes
 
 
-async def verify_epistula(
-    request: Request,
-    receiver_ss58: str,
-    epistula_version: str = Header(..., alias="Epistula-Version"),
-    epistula_timestamp: str = Header(..., alias="Epistula-Timestamp"),
-    epistula_uuid: str = Header(..., alias="Epistula-Uuid"),
-    epistula_signed_for: str = Header(..., alias="Epistula-Signed-For"),
-    epistula_signed_by: str = Header(..., alias="Epistula-Signed-By"),
-    epistula_signature: str = Header(..., alias="Epistula-Request-Signature"),
-) -> RequestContext:
+async def verify_epistula(request: Request, receiver_ss58: str) -> RequestContext:
     body = await request.body()
-    headers = EpistulaHeaders(
-        version=epistula_version,
-        timestamp_ms=epistula_timestamp,
-        uuid=epistula_uuid,
-        signed_for=epistula_signed_for,
-        signed_by=epistula_signed_by,
-        signature_hex=epistula_signature,
-    )
+    headers = EpistulaHeaders.from_http_headers(dict(request.headers))
+    if headers is None:
+        raise HTTPException(status_code=401, detail="epistula: missing_headers")
     outcome = verify(
         headers=headers,
         body=body,
