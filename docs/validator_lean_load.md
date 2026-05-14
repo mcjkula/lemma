@@ -2,7 +2,7 @@
 
 Operators tuning CPU on validators should separate **concurrency caps** (how many jobs run at once) from **spot full-verify fraction** (what fraction of attest-eligible responses still run Docker Lean).
 
-Subnet design context: [`knowledge/subnet.invariants.yaml`](../knowledge/subnet.invariants.yaml) (`compute_distribution` — push heavy work to miners where possible).
+Subnet design context: the subnet invariants reference (`compute_distribution` — push heavy work to miners where possible).
 
 ## Concurrency caps
 

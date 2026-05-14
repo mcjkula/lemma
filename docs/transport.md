@@ -25,7 +25,7 @@ Effects:
 
 ## Relation to subnet knowledge base
 
-[`knowledge/subnet.invariants.yaml`](../knowledge/subnet.invariants.yaml) marks **Axon / Dendrite / synapse** as **deprecated for *new* subnet designs** in favor of **HTTP APIs with Epistula signing**. Lemma **still implements** the classic path above for compatibility with the existing miner/validator ecosystem.
+the subnet invariants reference marks **Axon / Dendrite / synapse** as **deprecated for *new* subnet designs** in favor of **HTTP APIs with Epistula signing**. Lemma **still implements** the classic path above for compatibility with the existing miner/validator ecosystem.
 
 **Interpretation:** “Deprecated” here means **greenfield subnets** should not copy Axon-first patterns for new protocols; it does **not** imply Lemma will delete Dendrite support on a fixed date. A future migration would be a **major release** (HTTP endpoints, signing model, discovery), not a flag flip.
 
@@ -71,4 +71,4 @@ the operator upgrade checklist in [governance.md](governance.md).
 
 - Synapse definition + integrity check: [`lemma/protocol.py`](../lemma/protocol.py).
 - Epoch drops bad hashes: [`lemma/validator/epoch.py`](../lemma/validator/epoch.py).
-- Communication deprecation note: [`knowledge/subnet.invariants.yaml`](../knowledge/subnet.invariants.yaml) (`communication.axon_dendrite_synapse`).
+- Communication deprecation note: the subnet invariants reference (`communication.axon_dendrite_synapse`).

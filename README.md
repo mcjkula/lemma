@@ -87,7 +87,6 @@ Sybil/reward policy, proof metrics, commit-reveal, and attest behavior.
 
 - [Bittensor](https://docs.learnbittensor.org/)
 - [lean-eval](https://github.com/leanprover/lean-eval)
-- [miniF2F](https://github.com/openai/miniF2F) / [miniF2F-lean4](https://github.com/yangky11/miniF2F-lean4)
 - [mathlib4](https://github.com/leanprover-community/mathlib4)
 
 ## License

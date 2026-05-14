@@ -26,25 +26,20 @@ Validators with `LEMMA_PROBLEM_SOURCE=frozen` read `lemma/problems/legacy_frozen
 uv sync --extra catalog # public corpus sources only
 python scripts/build_lemma_catalog.py \
  --out lemma/problems/legacy_frozen.json \
- --sources yangky,dm,putnam
+ --sources legacy_a,legacy_b,legacy_c
 ```
 
 ## Sources
 
 | Key | Upstream |
 | --- | -------- |
-| `yangky` | [yangky11/public corpus-lean4](https://github.com/yangky11/public corpus-lean4) |
-| `dm` | [google-deepmind/public corpus](https://github.com/google-deepmind/public corpus) |
-| `putnam` | [public corpus](https://github.com/trishullab/public corpus) `lean4/src` |
-| `formalmath_*` | HF [public corpus-Lite](https://huggingface.co/datasets/SphereLab/public corpus-Lite) / [public corpus-All](https://huggingface.co/datasets/SphereLab/public corpus-All) |
+| `legacy_a` / `legacy_b` / `legacy_c` | Lean 4 public corpora (operator-supplied). |
 | `mathlib` | Local mathlib clone via `--mathlib-root` |
-
-[openai/public corpus](https://github.com/openai/public corpus) `lean/` is Lean 3 — use Lean 4 forks above.
 
 ## Extra inputs
 
 - `--merge-json`: append compatible JSON fragments (repeat allowed).
-- `--extra-repo URL REF PREFIX`: clone public repos; public corpus layout or loose scan for `theorem … := by sorry`.
+- `--extra-repo URL REF PREFIX`: clone public repos; loose scan for `theorem … := by sorry`.
 
 ## Not ingested
 

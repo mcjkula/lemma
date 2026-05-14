@@ -184,10 +184,10 @@ into scored theorem campaigns.
 
 | Source type | Why it is useful | Caution |
 | --- | --- | --- |
-| [Formal Conjectures](https://google-deepmind.github.io/formal-conjectures/) | Lean 4 statements of open conjectures, already shaped for automated theorem proving and Mathlib gap analysis. | Many statements still need faithfulness review, dependency triage, and difficulty labeling before rewards. |
-| [public corpus](https://dwrensha.github.io/compfiles/) / competition-style repositories | Good bridge between generated cadence theorems and harder curated work; many statements already have Lean context. | Solved entries are training/evaluation material, not bounty targets unless proofs are hidden or reformulated. |
-| [public corpus](https://trishullab.github.io/public corpus/) | Hard undergraduate competition formalizations with a public benchmark and leaderboard culture. | Benchmark use must avoid training leakage and respect the dataset's intended evaluation split. |
-| FirstProof-style research challenges | Close to the long-term "submit when ready" vision: unpublished or newly released research lemmas, expert grading, and high difficulty. | Usually starts as informal LaTeX, not a Lean theorem; Lemma would need a separate formalization and faithfulness-review phase before proof rewards. |
+| Public open-conjecture corpora | Lean 4 statements of open conjectures, already shaped for automated theorem proving and Mathlib gap analysis. | Many statements still need faithfulness review, dependency triage, and difficulty labeling before rewards. |
+| Competition-style repositories | Good bridge between generated cadence theorems and harder curated work; many statements already have Lean context. | Solved entries are training/evaluation material, not bounty targets unless proofs are hidden or reformulated. |
+| Hard undergraduate-competition formalizations | Public benchmark and leaderboard culture. | Benchmark use must avoid training leakage and respect the dataset's intended evaluation split. |
+| Research-challenge submissions | Close to the long-term "submit when ready" vision: unpublished or newly released research lemmas, expert grading, and high difficulty. | Usually starts as informal LaTeX, not a Lean theorem; Lemma would need a separate formalization and faithfulness-review phase before proof rewards. |
 
 The safest bootstrap path is: import candidate ideas, create reviewed Lean
 statements in a separate open-problem repo, publish the hash and deadline, then

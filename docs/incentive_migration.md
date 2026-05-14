@@ -36,7 +36,7 @@ expanded templates, and optional protocol hooks (env-gated).
 | Toolchain / image pins | Local `lemma/lean-sandbox:latest` is a dev build tag; production operators publish an immutable sandbox ref and set **`LEAN_SANDBOX_IMAGE`** consistently. See [toolchain-image-policy.md](toolchain-image-policy.md). |
 | Sybil / identity (documentation) | Same-coldkey partitioning is **not** sybil-proof — see [sybil_economics.md](sybil_economics.md) and [`knowledge/sybil.realities.yaml`](../knowledge/sybil.realities.yaml). |
 | Validator Lean load (documentation) | **`LEMMA_LEAN_VERIFY_MAX_CONCURRENT`**, optional **`LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION`** when attest on — see [validator_lean_load.md](validator_lean_load.md). |
-| Transport (documentation) | Dendrite/Axon + **`LemmaChallenge`** body-hash integrity vs **`computed_body_hash`**; miner responses fail closed when the hash header or deadline block is missing — see [transport.md](transport.md). [`knowledge/subnet.invariants.yaml`](../knowledge/subnet.invariants.yaml) deprecates Axon-first **new** designs in favor of HTTP + Epistula. |
+| Transport (documentation) | Dendrite/Axon + **`LemmaChallenge`** body-hash integrity vs **`computed_body_hash`**; miner responses fail closed when the hash header or deadline block is missing — see [transport.md](transport.md). the subnet invariants reference deprecates Axon-first **new** designs in favor of HTTP + Epistula. |
 
 ## Problem supply registry
 
