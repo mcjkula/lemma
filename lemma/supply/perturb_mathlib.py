@@ -1,127 +1,97 @@
-"""Perturbed-Mathlib supply: parameterise curated lemma templates with per-epoch constants."""
+"""Perturbed-Mathlib supply: read ``data/mathlib_seeds.jsonl`` and parameterise per epoch."""
 
 from __future__ import annotations
 
 import hashlib
+import json
 import random
-from collections.abc import Callable
 from dataclasses import dataclass
+from functools import lru_cache
+from pathlib import Path
+from typing import Any
 
 from lemma.problems.base import Problem
 
+_DEFAULT_SEEDS = Path(__file__).resolve().parent.parent.parent / "data" / "mathlib_seeds.jsonl"
+
 
 @dataclass(frozen=True, slots=True)
-class _Template:
+class _Seed:
+    id: str
     family: str
     split: str
+    type_expr: str
     imports: tuple[str, ...]
-    render: Callable[[random.Random], tuple[str, str]]
+    params: dict[str, Any]
 
 
-def _name(family: str, seed: int, idx: int) -> str:
-    digest = hashlib.sha256(f"{family}/{seed}/{idx}".encode()).hexdigest()[:12]
-    return f"perturb_{family}_{digest}"
+@lru_cache(maxsize=4)
+def _load_seeds(path: str) -> tuple[_Seed, ...]:
+    p = Path(path)
+    if not p.is_file():
+        return ()
+    out: list[_Seed] = []
+    for line in p.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        row = json.loads(line)
+        out.append(_Seed(
+            id=str(row["id"]),
+            family=str(row["family"]),
+            split=str(row.get("split", "easy")),
+            type_expr=str(row["type_expr"]),
+            imports=tuple(row.get("imports", ("Mathlib",))),
+            params=dict(row.get("params", {})),
+        ))
+    return tuple(out)
 
 
-def _rand_nat(rng: random.Random, lo: int = 2, hi: int = 97) -> int:
-    return rng.randint(lo, hi)
+def _draw_param(rng: random.Random, spec: dict[str, Any]) -> str:
+    kind = spec.get("kind")
+    if kind == "ident":
+        pool = spec.get("pool") or ["x"]
+        return str(rng.choice(pool))
+    lo, hi = int(spec.get("lo", 2)), int(spec.get("hi", 97))
+    if kind == "int":
+        return str(rng.randint(lo, hi))
+    return str(rng.randint(lo, hi))
 
 
-def _rand_ident(rng: random.Random) -> str:
-    return rng.choice(("lz", "qm", "wf", "kt", "sa", "ub", "rp", "ng", "yh", "ix"))
+def _render(seed: _Seed, rng: random.Random) -> str:
+    return seed.type_expr.format(**{name: _draw_param(rng, spec) for name, spec in seed.params.items()})
 
 
-def _add_comm_nat(rng: random.Random) -> tuple[str, str]:
-    a, b = _rand_nat(rng), _rand_nat(rng)
-    return f"({a} : Nat) + {b} = {b} + {a}", "add_comm"
-
-
-def _add_assoc_nat(rng: random.Random) -> tuple[str, str]:
-    a, b, c = _rand_nat(rng), _rand_nat(rng), _rand_nat(rng)
-    return f"({a} : Nat) + {b} + {c} = {a} + ({b} + {c})", "add_assoc"
-
-
-def _mul_comm_int(rng: random.Random) -> tuple[str, str]:
-    a, b = _rand_nat(rng), _rand_nat(rng)
-    return f"({a} : Int) * {b} = {b} * {a}", "mul_comm"
-
-
-def _nat_le_refl(rng: random.Random) -> tuple[str, str]:
-    var = _rand_ident(rng)
-    return f"∀ {var} : Nat, {var} ≤ {var}", "le_refl"
-
-
-def _abs_nonneg_int(rng: random.Random) -> tuple[str, str]:
-    var = _rand_ident(rng)
-    return f"∀ {var} : Int, |{var}| ≥ 0", "abs_nonneg"
-
-
-def _sq_nonneg_real(rng: random.Random) -> tuple[str, str]:
-    var = _rand_ident(rng)
-    return f"∀ {var} : ℝ, {var} ^ 2 ≥ 0", "sq_nonneg"
-
-
-def _two_mul_eq_add_self(rng: random.Random) -> tuple[str, str]:
-    var = _rand_ident(rng)
-    return f"∀ {var} : Nat, 2 * {var} = {var} + {var}", "two_mul"
-
-
-def _pow_zero(rng: random.Random) -> tuple[str, str]:
-    var = _rand_ident(rng)
-    return f"∀ {var} : Nat, {var} ^ 0 = 1", "pow_zero"
-
-
-def _list_length_append(rng: random.Random) -> tuple[str, str]:
-    a, b = _rand_ident(rng), _rand_ident(rng)
-    return (
-        f"∀ ({a} {b} : List Nat), ({a} ++ {b}).length = {a}.length + {b}.length",
-        "length_append",
-    )
-
-
-def _and_comm(rng: random.Random) -> tuple[str, str]:
-    a, b = _rand_ident(rng), _rand_ident(rng)
-    return f"∀ {a} {b} : Prop, ({a} ∧ {b}) ↔ ({b} ∧ {a})", "and_comm"
-
-
-_TEMPLATES: tuple[_Template, ...] = (
-    _Template("add_comm_nat", "easy", ("Mathlib",), _add_comm_nat),
-    _Template("add_assoc_nat", "easy", ("Mathlib",), _add_assoc_nat),
-    _Template("mul_comm_int", "easy", ("Mathlib",), _mul_comm_int),
-    _Template("nat_le_refl", "easy", ("Mathlib",), _nat_le_refl),
-    _Template("abs_nonneg_int", "medium", ("Mathlib",), _abs_nonneg_int),
-    _Template("sq_nonneg_real", "medium", ("Mathlib",), _sq_nonneg_real),
-    _Template("two_mul_eq_add_self", "medium", ("Mathlib",), _two_mul_eq_add_self),
-    _Template("pow_zero", "easy", ("Mathlib",), _pow_zero),
-    _Template("list_length_append", "medium", ("Mathlib",), _list_length_append),
-    _Template("and_comm", "easy", ("Mathlib",), _and_comm),
-)
+def _theorem_name(seed: _Seed, epoch_id: int, idx: int) -> str:
+    digest = hashlib.sha256(f"{seed.id}/{epoch_id}/{idx}".encode()).hexdigest()[:12]
+    return f"perturb_{seed.family}_{digest}"
 
 
 class PerturbedMathlibSource:
     name = "perturb_mathlib"
 
-    def __init__(self, lean_toolchain: str, mathlib_rev: str) -> None:
+    def __init__(self, lean_toolchain: str, mathlib_rev: str, seeds_path: Path | None = None) -> None:
         self._toolchain = lean_toolchain
         self._rev = mathlib_rev
+        self._seeds_path = str((seeds_path or _DEFAULT_SEEDS).resolve())
 
     def draw(self, epoch_id: int, count: int, rng_seed: bytes) -> list[Problem]:
+        seeds = _load_seeds(self._seeds_path)
+        if not seeds:
+            return []
         rng = random.Random(hashlib.sha256(rng_seed + str(epoch_id).encode()).digest())
         out: list[Problem] = []
         for i in range(max(0, int(count))):
-            tpl = _TEMPLATES[rng.randrange(len(_TEMPLATES))]
-            type_expr, _name_hint = tpl.render(rng)
-            theorem_name = _name(tpl.family, epoch_id, i)
-            out.append(
-                Problem(
-                    id=f"perturb/{epoch_id}/{i}",
-                    theorem_name=theorem_name,
-                    type_expr=type_expr,
-                    split=tpl.split,
-                    lean_toolchain=self._toolchain,
-                    mathlib_rev=self._rev,
-                    imports=tpl.imports,
-                    extra={"source": "perturb_mathlib", "family": tpl.family},
-                ),
-            )
+            seed = rng.choice(seeds)
+            type_expr = _render(seed, rng)
+            out.append(Problem(
+                id=f"perturb/{epoch_id}/{i}",
+                theorem_name=_theorem_name(seed, epoch_id, i),
+                type_expr=type_expr,
+                split=seed.split,
+                lean_toolchain=self._toolchain,
+                mathlib_rev=self._rev,
+                imports=seed.imports,
+                extra={"source": "perturb_mathlib", "family": seed.family, "seed_id": seed.id},
+            ))
         return out
