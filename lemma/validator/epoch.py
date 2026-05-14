@@ -29,11 +29,6 @@ from lemma.problems.base import Problem, ProblemSource
 from lemma.problems.generated import generated_registry_sha256
 from lemma.problems.hybrid import problem_supply_registry_sha256
 from lemma.protocol import LemmaChallenge, synapse_miner_response_integrity_ok
-from lemma.protocol_attest import (
-    attest_spot_should_full_verify,
-    miner_verify_attest_message,
-    verify_miner_verify_attest_signature,
-)
 from lemma.protocol_commit_reveal import (
     normalize_commitment_hex,
     verify_reveal_against_commitment,
@@ -179,25 +174,6 @@ def _set_weights_outcome(result: object) -> tuple[bool, str]:
     raw_message = getattr(result, "message", getattr(result, "msg", getattr(result, "error", None)))
     message = "" if raw_message is None else str(raw_message)
     return ok, message or ("" if ok else "success=False without message")
-
-
-def _update_verify_credibility(
-    credibility_by_uid: dict[int, float],
-    candidates: list[tuple[int, LemmaChallenge]],
-    verified: list[tuple[int, LemmaChallenge, VerifyResult]],
-    *,
-    alpha: float,
-) -> None:
-    ca = max(1e-9, min(1.0, float(alpha)))
-    attest_trusted_uids = {uid for uid, _resp, vr in verified if vr.reason == "attest_trusted"}
-    verified_by_validator_uids = {uid for uid, _resp, vr in verified if vr.reason != "attest_trusted"}
-    for uid, _resp in candidates:
-        if uid in attest_trusted_uids:
-            continue
-        outcome = 1.0 if uid in verified_by_validator_uids else 0.0
-        old_c = credibility_by_uid.get(uid, 1.0)
-        new_c = ca * outcome + (1.0 - ca) * old_c
-        credibility_by_uid[uid] = max(0.0, min(1.0, new_c))
 
 
 VerifyItem = tuple[int, LemmaChallenge, VerifyResult]
@@ -420,7 +396,6 @@ async def run_epoch(
     deadline_rejects = 0
     challenge_rejects = 0
     payload_rejects = 0
-    attest_rejects = 0
     commit_reveal_rejects = 0
     verify_infra_errors = 0
     verify_infra_error_uids: set[int] = set()
@@ -591,40 +566,6 @@ async def run_epoch(
                     filt_cr.append((uid_cr, resp_cr))
                 candidates = filt_cr
 
-            if settings.lemma_miner_verify_attest_enabled:
-                filt_att: list[tuple[int, LemmaChallenge]] = []
-                for uid_a, resp_a in candidates:
-                    sig_a = (resp_a.miner_verify_attest_signature_hex or "").strip()
-                    if not sig_a:
-                        attest_rejects += 1
-                        logger.warning(
-                            "uid={} dropping response: miner_verify_attest_signature_hex missing",
-                            uid_a,
-                        )
-                        continue
-                    hk_a = _hotkey_ss58_for_uid(metagraph, uid_a)
-                    if not hk_a:
-                        attest_rejects += 1
-                        logger.warning("uid={} dropping response: no metagraph hotkey", uid_a)
-                        continue
-                    msg_a = miner_verify_attest_message(
-                        resp_a,
-                        validator_hotkey=wallet.hotkey.ss58_address,
-                    )
-                    if not verify_miner_verify_attest_signature(
-                        hotkey_ss58=hk_a,
-                        message=msg_a,
-                        signature_hex=sig_a,
-                    ):
-                        attest_rejects += 1
-                        logger.warning(
-                            "uid={} dropping response: miner_verify_attest signature invalid",
-                            uid_a,
-                        )
-                        continue
-                    filt_att.append((uid_a, resp_a))
-                candidates = filt_att
-
             if not candidates and uids:
                 n_ch = sum(1 for r in responses if isinstance(r, LemmaChallenge))
                 n_ok = sum(1 for r in responses if isinstance(r, LemmaChallenge) and r.is_success)
@@ -646,12 +587,6 @@ async def run_epoch(
                 )
 
             verify_sem = asyncio.Semaphore(max(1, settings.lemma_lean_verify_max_concurrent))
-            spot_frac = (
-                float(settings.lemma_miner_verify_attest_spot_verify_fraction)
-                if settings.lemma_miner_verify_attest_enabled
-                else 1.0
-            )
-            spot_salt = str(settings.lemma_miner_verify_attest_spot_verify_salt or "")
 
             async def _verify_one(
                 uid: int,
@@ -660,23 +595,8 @@ async def run_epoch(
                 _sem: asyncio.Semaphore = verify_sem,
                 _vto: int = verify_timeout_s,
                 _problems_by_uid: dict[int, Problem] = problems_by_uid,
-                _spot_frac: float = spot_frac,
-                _spot_salt: str = spot_salt,
             ) -> tuple[int, LemmaChallenge, VerifyResult] | None:
                 prob = _problems_by_uid[uid]
-                if settings.lemma_miner_verify_attest_enabled:
-                    if not attest_spot_should_full_verify(
-                        uid=uid,
-                        theorem_id=prob.id,
-                        metronome_id=str(resp.metronome_id or ""),
-                        spot_verify_fraction=_spot_frac,
-                        spot_verify_salt=_spot_salt,
-                    ):
-                        return (
-                            uid,
-                            resp,
-                            VerifyResult(passed=True, reason="attest_trusted"),
-                        )
                 proof_src = resp.proof_script
                 if proof_src is None:
                     return None
@@ -701,11 +621,8 @@ async def run_epoch(
                     return None
                 return (uid, resp, vr)
 
-            verify_key_fn: Callable[[int, LemmaChallenge], str] | None = None
-            if not settings.lemma_miner_verify_attest_enabled:
-
-                def verify_key_fn(_uid: int, resp: LemmaChallenge) -> str:
-                    return _lean_verify_equivalence_key(resp)
+            def verify_key_fn(_uid: int, resp: LemmaChallenge) -> str:
+                return _lean_verify_equivalence_key(resp)
 
             verify_results = await _run_verify_batch(candidates, _verify_one, key_fn=verify_key_fn)
             verified = [(uid, resp, vr) for uid, resp, vr in verify_results if vr.passed]
@@ -729,17 +646,6 @@ async def run_epoch(
             )
             rep_dirty = rep_dirty or bool(rolling_outcomes)
             passed_uids_for_export.update(passed_uids)
-
-            vca = float(settings.lemma_reputation_verify_credibility_alpha)
-            if vca > 0.0 and candidates:
-                credibility_candidates = [(uid, resp) for uid, resp in candidates if uid not in infra_uids]
-                _update_verify_credibility(
-                    rep_store.credibility_by_uid,
-                    credibility_candidates,
-                    verified,
-                    alpha=vca,
-                )
-                rep_dirty = rep_dirty or bool(credibility_candidates)
 
             for uid_i, resp_i, vr_i in verified:
                 if export_path:
@@ -822,7 +728,7 @@ async def run_epoch(
         "theorem_id={} k_problems={} uid_variant_problems={} verified={} scored={} weight_entries={} "
         "coldkey_partitioned={} deadline_rejects={} "
         "challenge_rejects={} payload_rejects={} "
-        "attest_rejects={} commit_reveal_rejects={} verify_infra_errors={} "
+        "commit_reveal_rejects={} verify_infra_errors={} "
         "skip_set_weights={} seconds={:.2f}  "
         "[verified=Lean proof OK; scored=verified proof rows; weight_entries=rolling-score weight rows]",
         cur_block,
@@ -841,7 +747,6 @@ async def run_epoch(
         deadline_rejects,
         challenge_rejects,
         payload_rejects,
-        attest_rejects,
         commit_reveal_rejects,
         verify_infra_errors,
         skip_chain_write,

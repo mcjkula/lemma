@@ -39,11 +39,6 @@ class MinerService:
         )
         priority_fn = make_miner_priority(cache) if use_stake_priority else zero_miner_priority
 
-        if s.lemma_miner_verify_attest_enabled and not s.miner_local_verify:
-            raise SystemExit(
-                "LEMMA_MINER_VERIFY_ATTEST_ENABLED=1 requires LEMMA_MINER_LOCAL_VERIFY=1 — "
-                "miners must locally Lean-verify before signing attestations.",
-            )
         prover = LLMProver(s)
         forward = make_forward(
             s,

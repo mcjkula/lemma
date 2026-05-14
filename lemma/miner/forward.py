@@ -21,7 +21,6 @@ from lemma.miner.limits import reject_synopsis
 from lemma.miner.prover import Prover
 from lemma.problems.factory import resolve_problem
 from lemma.protocol import LemmaChallenge
-from lemma.protocol_attest import miner_verify_attest_message, sign_miner_verify_attest
 from lemma.protocol_commit_reveal import (
     commit_preimage_v1,
     commitment_hex_from_preimage,
@@ -387,7 +386,6 @@ def make_forward(
             synapse.commit_reveal_phase = "commit"
             synapse.proof_script = ""
             synapse.commit_reveal_nonce_hex = None
-            synapse.miner_verify_attest_signature_hex = None
             err = synapse_payload_error(synapse, settings)
             if err:
                 return reject_synopsis(synapse, 413, err)
@@ -400,25 +398,6 @@ def make_forward(
             return _with_computed_body_hash(synapse)
 
         synapse.proof_script = proof
-
-        if settings.lemma_miner_verify_attest_enabled:
-            if wallet is None or not hasattr(wallet, "hotkey"):
-                logger.error("miner attest enabled but wallet not bound on axon forward")
-                return reject_synopsis(synapse, 500, "miner misconfigured: wallet required for attest")
-            validator_hotkey = str(getattr(getattr(synapse, "dendrite", None), "hotkey", "") or "").strip()
-            if not validator_hotkey:
-                return reject_synopsis(synapse, 400, "miner attest requires validator dendrite hotkey")
-            if local_lean_status != "PASS":
-                return reject_synopsis(
-                    synapse,
-                    400,
-                    (
-                        "LEMMA_MINER_VERIFY_ATTEST_ENABLED requires local Lean verify PASS "
-                        "(set LEMMA_MINER_LOCAL_VERIFY=1)"
-                    ),
-                )
-            msg = miner_verify_attest_message(synapse, validator_hotkey=validator_hotkey)
-            synapse.miner_verify_attest_signature_hex = sign_miner_verify_attest(wallet, msg)
 
         err = synapse_payload_error(synapse, settings)
         if err:

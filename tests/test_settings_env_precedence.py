@@ -141,23 +141,10 @@ def test_documented_validator_wallet_env_overrides_miner_wallet(monkeypatch: pyt
 def test_documented_protocol_env_names_work(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     monkeypatch.delenv("LEMMA_PREFER_PROCESS_ENV", raising=False)
     env_file = tmp_path / ".env"
-    env_file.write_text(
-        "\n".join(
-            [
-                "LEMMA_COMMIT_REVEAL_ENABLED=1",
-                "LEMMA_MINER_VERIFY_ATTEST_ENABLED=1",
-                "LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_FRACTION=0.25",
-                "LEMMA_MINER_VERIFY_ATTEST_SPOT_VERIFY_SALT=salt",
-            ],
-        ),
-        encoding="utf-8",
-    )
+    env_file.write_text("LEMMA_COMMIT_REVEAL_ENABLED=1\n", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
     s = LemmaSettings(_env_file=str(env_file))
     assert s.lemma_commit_reveal_enabled is True
-    assert s.lemma_miner_verify_attest_enabled is True
-    assert s.lemma_miner_verify_attest_spot_verify_fraction == 0.25
-    assert s.lemma_miner_verify_attest_spot_verify_salt == "salt"
 
 
 def test_documented_timeout_and_prover_policy_env_names_work(

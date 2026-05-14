@@ -125,7 +125,6 @@ VerifyReason = Literal[
     "oom",
     "docker_error",
     "remote_error",
-    "attest_trusted",
 ]
 
 
