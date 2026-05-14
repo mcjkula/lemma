@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
+from contextlib import suppress
 from typing import Any
 
 import click
@@ -21,44 +22,30 @@ def stylize(text: str, **kwargs: Any) -> str:
 
 
 def _poke_controlling_tty() -> None:
-    """Write reset + newline to the session's controlling terminal (Unix).
-
-    Cursor/VS Code and some CI wrappers replace ``sys.stdout`` / ``sys.stderr`` so ``isatty()`` can lie;
-    ``/dev/tty`` is still the real terminal the shell reads for the prompt.
-    """
+    """Cursor/VS Code redirect sys.stdout so isatty() lies; /dev/tty is the real terminal."""
     if os.name != "posix":
         return
-    try:
-        with open("/dev/tty", "w", encoding="utf-8", errors="replace") as tty:
-            if "NO_COLOR" not in os.environ:
-                tty.write("\r\033[0m\033[39m\033[49m\033[?25h")
-            tty.write("\n\n")
-            tty.flush()
-    except OSError:
-        pass
+    with suppress(OSError), open("/dev/tty", "w", encoding="utf-8", errors="replace") as tty:
+        if "NO_COLOR" not in os.environ:
+            tty.write("\r\033[0m\033[39m\033[49m\033[?25h")
+        tty.write("\n\n")
+        tty.flush()
 
 
 def finish_cli_output() -> None:
-    """End-of-command: newline(s) + flush so the shell prompt redraws reliably after mixed stdout/stderr."""
+    """End-of-command newline + reset so the shell prompt redraws after mixed stdout/stderr."""
     no_color = "NO_COLOR" in os.environ
-    # Stderr first: many shells attach the interactive prompt to stderr-backed styling from subprocesses
-    # (zsh/bash under Cursor/VS Code integrated terminals).
+    # Stderr first: zsh/bash under Cursor/VS Code attach the prompt to stderr-backed styling.
     for stream in (sys.stderr, sys.stdout):
-        try:
+        with suppress(BrokenPipeError, OSError):
             if not no_color and stream.isatty():
-                # \r — column 0 if output ended mid-line; full reset + show cursor; newline.
                 stream.write("\r\033[0m\033[39m\033[49m\033[?25h\n")
             else:
                 stream.write("\n")
             stream.flush()
-        except (BrokenPipeError, OSError):
-            pass
-    # Extra trailing newline on stderr nudges some IDEs to repaint the prompt.
-    try:
+    with suppress(BrokenPipeError, OSError):
         if sys.stderr.isatty():
             sys.stderr.write("\n")
             sys.stderr.flush()
-    except (BrokenPipeError, OSError):
-        pass
     click.echo("")
     _poke_controlling_tty()

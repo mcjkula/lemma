@@ -21,6 +21,6 @@ def discover_public_ipv4(timeout_s: float = 5.0) -> str | None:
             ip = r.text.strip().split()[0]
             ipaddress.IPv4Address(ip)
             return ip
-        except Exception as e:  # noqa: BLE001
+        except (httpx.HTTPError, OSError, IndexError, ValueError) as e:
             logger.debug("public IPv4 discovery failed via {}: {}", url, e)
     return None
