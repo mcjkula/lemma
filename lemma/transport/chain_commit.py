@@ -19,7 +19,7 @@ _KIND_BATCH = "lemma:batch"
 class ChainStamp:
     block: int
     kind: str
-    payload: bytes
+    payload: str
 
 
 def _head_block(subtensor: Any) -> int:
@@ -40,7 +40,7 @@ def anchor_batch(
     epoch_id: int,
     merkle_root_hex: str,
 ) -> ChainStamp:
-    payload = f"{_KIND_BATCH}:{epoch_id}:{merkle_root_hex}".encode("utf-8")
+    payload = f"{_KIND_BATCH}:{epoch_id}:{merkle_root_hex}"
     setter = getattr(subtensor, "set_commitment", None)
     if callable(setter):
         setter(wallet=wallet, netuid=netuid, data=payload)
