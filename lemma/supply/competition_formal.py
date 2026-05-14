@@ -62,6 +62,8 @@ class CompetitionFormalSource:
             if not type_expr or not theorem_name:
                 continue
             split = str(row.get("split", "hard")).strip() or "hard"
+            imports_raw = row.get("imports")
+            imports = tuple(imports_raw) if isinstance(imports_raw, list) else ("Mathlib",)
             out.append(
                 Problem(
                     id=_problem_id(row),
@@ -70,7 +72,7 @@ class CompetitionFormalSource:
                     split=split,
                     lean_toolchain=self._toolchain,
                     mathlib_rev=self._rev,
-                    imports=tuple(row.get("imports") or ("Mathlib",)),
+                    imports=imports,
                     extra={
                         "source": "competition_formal",
                         "origin": str(row.get("origin") or ""),

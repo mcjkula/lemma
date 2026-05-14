@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import random
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from lemma.problems.base import Problem
@@ -14,7 +15,7 @@ class _Template:
     family: str
     split: str
     imports: tuple[str, ...]
-    render: callable  # rng -> (type_expr, theorem_name_hint)
+    render: Callable[[random.Random], tuple[str, str]]
 
 
 def _name(family: str, seed: int, idx: int) -> str:
