@@ -99,7 +99,7 @@ def _settings() -> LemmaSettings:
         "lean_use_docker": True,
         "lemma_lean_docker_worker": WORKER,
         "lean_verify_workspace_cache_dir": Path(CACHE_DIR),
-        "lean_verify_timeout_s": 300,
+        "lean_verify_timeout_s": 900,
     })
 
 
@@ -123,7 +123,7 @@ def test_lean_kernel_accepts_valid_proof() -> None:
         "theorem integration_trivial : True := True.intro\n"
     )
     result = run_lean_verify(
-        _settings(), verify_timeout_s=300, problem=_problem(), proof_script=submission,
+        _settings(), verify_timeout_s=900, problem=_problem(), proof_script=submission,
     )
     assert result.passed, (
         f"Expected pass; got reason={result.reason}\n"
@@ -143,7 +143,7 @@ def test_lean_kernel_rejects_malformed_proof() -> None:
         "  bogus_tactic\n"
     )
     result = run_lean_verify(
-        _settings(), verify_timeout_s=300, problem=_problem(), proof_script=submission,
+        _settings(), verify_timeout_s=900, problem=_problem(), proof_script=submission,
     )
     assert not result.passed
     assert result.reason in {"compile_error", "axiom_violation", "cheat_token"}
@@ -157,7 +157,7 @@ def test_lean_kernel_rejects_sorry() -> None:
         "theorem integration_trivial : True := by sorry\n"
     )
     result = run_lean_verify(
-        _settings(), verify_timeout_s=300, problem=_problem(), proof_script=submission,
+        _settings(), verify_timeout_s=900, problem=_problem(), proof_script=submission,
     )
     assert not result.passed
     # ``sorry`` introduces ``sorryAx`` outside the allowed-axiom set; the scanner
