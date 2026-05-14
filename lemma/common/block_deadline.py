@@ -5,11 +5,7 @@ from __future__ import annotations
 from loguru import logger
 
 from lemma.common.config import LemmaSettings
-from lemma.common.problem_seed import (
-    blocks_until_quantize_boundary,
-    effective_chain_head_for_problem_seed,
-    resolve_problem_seed,
-)
+from lemma.common.problem_seed import blocks_until_quantize_boundary
 
 
 def _clamp_forward_wait_s(settings: LemmaSettings, raw_s: float) -> float:
@@ -60,33 +56,3 @@ def compute_forward_deadline_and_wait(
     return deadline, _clamp_forward_wait_s(settings, raw)
 
 
-def forward_wait_at_chain_head(
-    *,
-    settings: LemmaSettings,
-    subtensor: object,
-    chain_head_block: int,
-    wait_scale: float = 1.0,
-) -> tuple[int, str, int, float]:
-    """Resolve the problem seed at ``chain_head_block`` and return forward HTTP wait (blocks × time, clamped).
-
-    Applies ``LEMMA_PROBLEM_SEED_CHAIN_HEAD_SLACK_BLOCKS`` to match ``run_epoch``.
-
-    Returns ``(problem_seed, seed_tag, deadline_block, forward_wait_s)`` for status/doctor output.
-    """
-    slack = int(settings.lemma_problem_seed_chain_head_slack_blocks or 0)
-    head_eff = effective_chain_head_for_problem_seed(int(chain_head_block), slack)
-    problem_seed, seed_tag = resolve_problem_seed(
-        chain_head_block=head_eff,
-        netuid=settings.netuid,
-        mode=settings.problem_seed_mode,
-        quantize_blocks=settings.problem_seed_quantize_blocks,
-        subtensor=subtensor,
-    )
-    deadline_block, forward_wait_s = compute_forward_deadline_and_wait(
-        settings=settings,
-        subtensor=subtensor,
-        cur_block=head_eff,
-        seed_tag=seed_tag,
-        wait_scale=wait_scale,
-    )
-    return problem_seed, seed_tag, deadline_block, forward_wait_s

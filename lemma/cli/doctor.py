@@ -49,17 +49,11 @@ def _api_lines(settings: LemmaSettings) -> tuple[list[str], bool]:
 
 def _chain_snapshot(settings: LemmaSettings) -> tuple[int | None, float | None, Exception | None]:
     try:
-        from lemma.common.block_deadline import forward_wait_at_chain_head
         from lemma.common.subtensor import get_subtensor
 
         subtensor = get_subtensor(settings)
         head = int(subtensor.get_current_block())
-        _, _, _, forward_wait = forward_wait_at_chain_head(
-            settings=settings,
-            subtensor=subtensor,
-            chain_head_block=head,
-        )
-        return head, float(forward_wait), None
+        return head, None, None
     except Exception as exc:  # noqa: BLE001
         return None, None, exc
 
