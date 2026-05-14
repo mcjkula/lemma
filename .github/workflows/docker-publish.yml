@@ -1,9 +1,4 @@
-# Chi Subnet - Docker Build and Push
-#
-# This workflow builds and pushes the Docker image to GHCR
-# whenever code is pushed to the main branch.
-#
-# Validators using Watchtower will automatically pull the new image.
+# Build and push the Lemma runtime image to GHCR on main-branch updates.
 
 name: Build and Push Docker Image
 
