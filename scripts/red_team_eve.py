@@ -20,6 +20,7 @@ import argparse
 import json
 import sys
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from lemma.scoring.budget import compute_budget
 from lemma.scoring.dedup import submission_fingerprint
@@ -145,7 +146,6 @@ SCENARIOS = (
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--duration", default=None, help="ignored; accepted for CLI compatibility")
     ap.add_argument("--report", default="-")
     args = ap.parse_args()
 
@@ -154,17 +154,11 @@ def main() -> int:
     eve_emission_ratio = max((float(r) for r in ratios if isinstance(r, (int, float))), default=0.0)
     all_passed = all(bool(r.get("passed")) for r in results)
 
-    report = {
-        "scenarios": results,
-        "eve_emission_ratio": eve_emission_ratio,
-        "all_passed": all_passed,
-    }
+    report = {"scenarios": results, "eve_emission_ratio": eve_emission_ratio, "all_passed": all_passed}
     out = json.dumps(report, indent=2)
     if args.report == "-":
         sys.stdout.write(out + "\n")
     else:
-        from pathlib import Path
-
         Path(args.report).write_text(out + "\n", encoding="utf-8")
         print(f"wrote {args.report}")
     return 0 if all_passed else 2
