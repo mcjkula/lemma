@@ -16,7 +16,7 @@ from lemma.common.async_llm_retry import (
     async_llm_retry,
 )
 from lemma.common.config import LemmaSettings
-from lemma.protocol import LemmaChallenge
+from lemma.protocol import ChallengePayload
 
 T = TypeVar("T")
 
@@ -29,7 +29,7 @@ def _httpx_timeout(settings: LemmaSettings) -> httpx.Timeout:
 
 
 class Prover(Protocol):
-    async def solve(self, synapse: LemmaChallenge) -> str:
+    async def solve(self, synapse: ChallengePayload) -> str:
         """Return complete ``Submission.lean`` source."""
 
 
@@ -57,7 +57,7 @@ class LLMProver:
     def __init__(self, settings: LemmaSettings) -> None:
         self._settings = settings
 
-    async def solve(self, synapse: LemmaChallenge) -> str:
+    async def solve(self, synapse: ChallengePayload) -> str:
         _raise_if_prover_model_is_studio_client_id(self._settings.prover_model)
         user = f"Imports hint: {synapse.imports}\n\nTheorem block:\n{synapse.theorem_statement}\n"
         text = await self._complete(user)
@@ -172,5 +172,5 @@ def _normalize_prover_payload(
     return proof_in
 
 
-def _stub(synapse: LemmaChallenge) -> str:
+def _stub(synapse: ChallengePayload) -> str:
     return synapse.theorem_statement

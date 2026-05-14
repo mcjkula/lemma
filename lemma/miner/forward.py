@@ -11,7 +11,7 @@ from lemma.common.config import LemmaSettings
 from lemma.lean.verify_runner import run_lean_verify
 from lemma.miner.prover import LLMProver
 from lemma.problems.factory import resolve_problem
-from lemma.protocol import ChallengePayload, CommitPayload, LemmaChallenge, RevealPayload
+from lemma.protocol import ChallengePayload, CommitPayload, RevealPayload
 
 
 def _commitment_hex(proof_script: str, nonce_hex: str) -> str:
@@ -22,21 +22,8 @@ def _commitment_hex(proof_script: str, nonce_hex: str) -> str:
     return h.hexdigest()
 
 
-def _legacy_challenge(payload: ChallengePayload) -> LemmaChallenge:
-    return LemmaChallenge(
-        theorem_id=payload.theorem_id,
-        theorem_statement=payload.theorem_statement,
-        imports=payload.imports,
-        lean_toolchain=payload.lean_toolchain,
-        mathlib_rev=payload.mathlib_rev,
-        deadline_unix=0,
-        deadline_block=payload.deadline_block,
-        metronome_id=payload.metronome_id,
-    )
-
-
-async def _solve(settings: LemmaSettings, prover: LLMProver, payload: ChallengePayload) -> str:
-    return await prover.solve(_legacy_challenge(payload))
+async def _solve(prover: LLMProver, payload: ChallengePayload) -> str:
+    return await prover.solve(payload)
 
 
 def _local_verify_ok(settings: LemmaSettings, payload: ChallengePayload, proof_script: str) -> bool:
@@ -60,7 +47,7 @@ async def handle_commit(
     payload: ChallengePayload,
     sender_ss58: str,
 ) -> CommitPayload:
-    proof = await _solve(settings, prover, payload)
+    proof = await _solve(prover, payload)
     if not _local_verify_ok(settings, payload, proof):
         proof = ""
     nonce_hex = secrets.token_hex(16)
@@ -77,7 +64,7 @@ async def handle_reveal(
     payload: ChallengePayload,
     sender_ss58: str,
 ) -> RevealPayload:
-    proof = await _solve(settings, prover, payload)
+    proof = await _solve(prover, payload)
     if not _local_verify_ok(settings, payload, proof):
         proof = ""
     return RevealPayload(
@@ -85,8 +72,3 @@ async def handle_reveal(
         metronome_id=payload.metronome_id,
         proof_script=proof,
     )
-
-
-def make_forward(*args, **kwargs):  # type: ignore[no-untyped-def]
-    """Deprecated: legacy bt.Axon shim. Removed in Stage 2 cutover."""
-    raise NotImplementedError("bt.Axon forward removed; use FastAPI service instead")
