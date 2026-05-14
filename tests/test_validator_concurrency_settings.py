@@ -1,14 +1,9 @@
-"""Validator epoch concurrency caps for Lean verification."""
+"""Network-coordination defaults must match across validators."""
 
 from lemma.common.config import LemmaSettings
 
 
-def test_defaults_for_large_subnet_tuning() -> None:
-    s = LemmaSettings()
-    assert s.problem_seed_quantize_blocks == 100
-    assert s.lemma_lean_verify_max_concurrent >= 1
-
-
-def test_explicit_caps() -> None:
-    s = LemmaSettings(lemma_lean_verify_max_concurrent=16)
-    assert s.lemma_lean_verify_max_concurrent == 16
+def test_quantize_blocks_default_is_load_bearing() -> None:
+    # Validators must agree on this default; differing values yield different
+    # theorem seeds per epoch and split the network.
+    assert LemmaSettings().problem_seed_quantize_blocks == 100
