@@ -24,7 +24,7 @@ def _settings() -> LemmaSettings:
         miner_forward_timeline=False,
         miner_log_forwards=False,
         miner_local_verify=False,
-        miner_max_forwards_per_day=0,
+        
     )
 
 

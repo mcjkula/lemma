@@ -92,7 +92,7 @@ async def test_validator_rejects_oversized_proof_before_lean(monkeypatch, tmp_pa
 
     settings = LemmaSettings(
         _env_file=None,
-        synapse_max_proof_chars=1024,
+        lemma_inbound_max_chars=1024,
         lemma_reputation_state_path=tmp_path / "reputation.json",
     )
 

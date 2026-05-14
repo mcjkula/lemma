@@ -18,7 +18,7 @@ def _challenge(**kwargs) -> LemmaChallenge:
 
 
 def test_challenge_payload_check_keeps_statement_cap() -> None:
-    settings = LemmaSettings(synapse_max_statement_chars=1024)
+    settings = LemmaSettings(lemma_inbound_max_chars=1024)
 
     err = synapse_payload_error(_challenge(theorem_statement="x" * 1025), settings, response=False)
 

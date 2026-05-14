@@ -13,9 +13,9 @@ def synapse_payload_error(
     *,
     response: bool = True,
 ) -> str | None:
-    """Return an error message if challenge/response fields exceed configured caps."""
+    cap = settings.lemma_inbound_max_chars
     stmt = synapse.theorem_statement or ""
-    if len(stmt) > settings.synapse_max_statement_chars:
+    if len(stmt) > cap:
         return "theorem_statement too large"
     if not response:
         return None
@@ -28,6 +28,6 @@ def synapse_payload_error(
             return "commit phase response must not include proof_script"
         return None
     pr = synapse.proof_script or ""
-    if len(pr) > settings.synapse_max_proof_chars:
+    if len(pr) > cap:
         return "proof_script too large"
     return None

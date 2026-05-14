@@ -15,7 +15,6 @@ from loguru import logger
 from lemma.common.config import LemmaSettings
 from lemma.common.synapse_limits import synapse_payload_error
 from lemma.lean.verify_runner import run_lean_verify
-from lemma.miner.daily_budget import allow_daily_forward
 from lemma.miner.gating import MetagraphCache, metagraph_incentive_for_hotkey
 from lemma.miner.limits import reject_synopsis
 from lemma.miner.prover import Prover
@@ -151,12 +150,6 @@ def make_forward(
             except Exception as e:  # noqa: BLE001 — RPC optional
                 logger.warning("deadline_block check skipped: {}", e)
 
-        if settings.miner_max_forwards_per_day > 0 and not allow_daily_forward(settings.miner_max_forwards_per_day):
-            return reject_synopsis(
-                synapse,
-                429,
-                f"daily forward limit reached ({settings.miner_max_forwards_per_day}/UTC day)",
-            )
 
         my_uid_s = "?"
         my_inc_s = "?"

@@ -263,7 +263,7 @@ async def test_verify_infra_failure_is_exported_and_not_counted_for_credibility(
         _settings(
             tmp_path,
             training_export_jsonl=export_path,
-            lemma_reputation_verify_credibility_alpha=1.0,
+            
         ),
         _OneProblemSource(),
         dry_run=False,
@@ -516,7 +516,7 @@ async def test_all_fail_epoch_persists_verify_credibility_downgrade(monkeypatch,
         _settings(
             tmp_path,
             lemma_reputation_state_path=reputation_path,
-            lemma_reputation_verify_credibility_alpha=1.0,
+            
         ),
         _OneProblemSource(),
         dry_run=False,

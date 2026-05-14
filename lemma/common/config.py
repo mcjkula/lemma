@@ -11,7 +11,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic_settings.sources import PydanticBaseSettingsSource
 
 
-
 def _stripped_or_none(value: str | None) -> str | None:
     s = (value or "").strip()
     return s or None
@@ -27,7 +26,6 @@ class LemmaSettings(BaseSettings):
     )
 
     def __init__(self, **data: Any) -> None:
-        """Accept Python field-name kwargs without accepting field-name env vars."""
         for name, field in type(self).model_fields.items():
             if name not in data:
                 continue
@@ -51,622 +49,250 @@ class LemmaSettings(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
-        """Prefer ``.env`` over process environment for the same variable name.
-
-        Default pydantic-settings order lets exported shell variables beat values written by ``lemma setup``.
-        Explicit constructor kwargs still win (handled first). Set ``LEMMA_PREFER_PROCESS_ENV=1`` to restore
-        the library default (environment overrides ``.env``) for CI/containers that rely on it.
-        """
-        if os.environ.get("LEMMA_PREFER_PROCESS_ENV", "").strip().lower() in (
-            "1",
-            "true",
-            "yes",
-        ):
-            return (
-                init_settings,
-                env_settings,
-                dotenv_settings,
-                file_secret_settings,
-            )
-        return (
-            init_settings,
-            dotenv_settings,
-            env_settings,
-            file_secret_settings,
-        )
+        if os.environ.get("LEMMA_PREFER_PROCESS_ENV", "").strip().lower() in ("1", "true", "yes"):
+            return (init_settings, env_settings, dotenv_settings, file_secret_settings)
+        return (init_settings, dotenv_settings, env_settings, file_secret_settings)
 
     netuid: int = Field(default=0, ge=0, validation_alias="NETUID")
 
-    problem_source: Literal["hybrid", "generated", "frozen"] = Field(
-        default="hybrid",
-        validation_alias="LEMMA_PROBLEM_SOURCE",
-        description="hybrid = generated + curated catalog; generated = templates only; frozen = dev eval catalog.",
+    problem_source: Literal["hybrid", "generated"] = Field(
+        default="hybrid", validation_alias="LEMMA_PROBLEM_SOURCE",
     )
     lemma_hybrid_generated_weight: int = Field(
-        default=60,
-        ge=0,
-        le=10_000,
-        validation_alias="LEMMA_HYBRID_GENERATED_WEIGHT",
-        description="Deterministic hybrid source weight for generated templates.",
+        default=60, ge=0, le=10_000, validation_alias="LEMMA_HYBRID_GENERATED_WEIGHT",
     )
     lemma_hybrid_catalog_weight: int = Field(
-        default=40,
-        ge=0,
-        le=10_000,
-        validation_alias="LEMMA_HYBRID_CATALOG_WEIGHT",
-        description="Deterministic hybrid source weight for bundled curated catalog problems.",
+        default=40, ge=0, le=10_000, validation_alias="LEMMA_HYBRID_CATALOG_WEIGHT",
     )
     problem_seed_quantize_blocks: int = Field(
-        default=100,
-        ge=1,
-        le=1_000_000,
-        validation_alias="LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS",
-        description=(
-            "Used when LEMMA_PROBLEM_SEED_MODE=quantize: problem_seed = (chain_head // N) * N "
-            "(e.g. N=100 and ~12 s/block ≈ 20 min per theorem). "
-            "Also subnet_epoch fallback if Tempo query fails."
-        ),
+        default=100, ge=1, le=1_000_000, validation_alias="LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS",
     )
     problem_seed_mode: Literal["quantize", "subnet_epoch"] = Field(
-        default="quantize",
-        validation_alias="LEMMA_PROBLEM_SEED_MODE",
-        description=(
-            "quantize: fixed N-block windows (`LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS`) — same theorem for everyone "
-            "between rotations. "
-            "subnet_epoch: seed from subnet Tempo stride via chain RPC (alternative cadence)."
-        ),
+        default="quantize", validation_alias="LEMMA_PROBLEM_SEED_MODE",
     )
     lemma_problem_seed_chain_head_slack_blocks: int = Field(
-        default=0,
-        ge=0,
-        le=128,
-        validation_alias="LEMMA_PROBLEM_SEED_CHAIN_HEAD_SLACK_BLOCKS",
-        description=(
-            "Subtract this many blocks from RPC chain head before problem_seed resolution and forward HTTP "
-            "deadline math (same value used for both). Default 0; try 1 if validators disagree on theorem by "
-            "one block near quantize boundaries."
-        ),
+        default=0, ge=0, le=128, validation_alias="LEMMA_PROBLEM_SEED_CHAIN_HEAD_SLACK_BLOCKS",
     )
     generated_registry_expected_sha256: str | None = Field(
-        default=None,
-        validation_alias="LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED",
-        description=(
-            "Validators with LEMMA_PROBLEM_SOURCE=generated must set this; startup fails unless it matches "
-            "the live generated-registry hash (`lemma meta`)."
-        ),
+        default=None, validation_alias="LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED",
     )
     problem_supply_registry_expected_sha256: str | None = Field(
-        default=None,
-        validation_alias="LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED",
-        description=(
-            "Validators with LEMMA_PROBLEM_SOURCE=hybrid must set this; startup fails unless it matches "
-            "the live hybrid supply hash (`lemma meta`)."
-        ),
+        default=None, validation_alias="LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED",
     )
     lemma_generated_legacy_plain_rng: bool = Field(
-        default=False,
-        validation_alias="LEMMA_GENERATED_LEGACY_PLAIN_RNG",
-        description=(
-            "If true, template RNG uses random.Random(chain_seed) (legacy). Default false: SHA256-mix chain seed "
-            "before RNG for less correlated template picks across adjacent seeds (see lemma/problems/generated.py)."
-        ),
+        default=False, validation_alias="LEMMA_GENERATED_LEGACY_PLAIN_RNG",
     )
-    subtensor_network: str = Field(
-        default="finney",
-        validation_alias="SUBTENSOR_NETWORK",
-    )
+
+    subtensor_network: str = Field(default="finney", validation_alias="SUBTENSOR_NETWORK")
     subtensor_chain_endpoint: str | None = Field(
-        default=None,
-        validation_alias="SUBTENSOR_CHAIN_ENDPOINT",
+        default=None, validation_alias="SUBTENSOR_CHAIN_ENDPOINT",
     )
-
-    wallet_cold: str = Field(
-        default="default",
-        validation_alias="BT_WALLET_COLD",
-    )
-    wallet_hot: str = Field(
-        default="default",
-        validation_alias="BT_WALLET_HOT",
-    )
-    validator_wallet_cold: str | None = Field(
-        default=None,
-        validation_alias="BT_VALIDATOR_WALLET_COLD",
-        description="If set, `lemma validator` / `validator check` use this coldkey instead of BT_WALLET_COLD.",
-    )
-    validator_wallet_hot: str | None = Field(
-        default=None,
-        validation_alias="BT_VALIDATOR_WALLET_HOT",
-        description="If set, validator uses this hotkey name instead of BT_WALLET_HOT.",
-    )
-
+    wallet_cold: str = Field(default="default", validation_alias="BT_WALLET_COLD")
+    wallet_hot: str = Field(default="default", validation_alias="BT_WALLET_HOT")
     axon_port: int = Field(default=8091, validation_alias="AXON_PORT")
-    axon_external_ip: str | None = Field(
-        default=None,
-        validation_alias="AXON_EXTERNAL_IP",
-        description="Public IPv4/host validators use to reach this axon; set explicitly for production miners.",
-    )
+    axon_external_ip: str | None = Field(default=None, validation_alias="AXON_EXTERNAL_IP")
     axon_discover_external_ip: bool = Field(
-        default=False,
-        validation_alias="AXON_DISCOVER_EXTERNAL_IP",
-        description="If true and AXON_EXTERNAL_IP is unset, fetch public IPv4 over HTTPS before serving.",
+        default=True, validation_alias="AXON_DISCOVER_EXTERNAL_IP",
     )
 
     lean_sandbox_image: str = Field(
-        default="lemma/lean-sandbox:latest",
-        validation_alias="LEAN_SANDBOX_IMAGE",
-        description=(
-            "Docker image/ref used for Lean verification. The local default is mutable; production templates "
-            "should set the subnet-published immutable tag or digest."
-        ),
+        default="lemma-lean-sandbox:latest", validation_alias="LEMMA_LEAN_SANDBOX_IMAGE",
     )
     lean_verify_timeout_s: int = Field(
-        default=300,
-        ge=1,
-        validation_alias="LEAN_VERIFY_TIMEOUT_S",
-        description=(
-            "Seconds for Docker/host lake build + axiom check per miner submission. "
-            "Default 300 (5m); raise for heavy Mathlib builds if timeouts are false positives."
-        ),
+        default=180, ge=10, le=3600, validation_alias="LEAN_VERIFY_TIMEOUT_S",
     )
     lean_sandbox_cpu: float = Field(
-        default=2.0,
-        validation_alias="LEAN_SANDBOX_CPU",
+        default=2.0, gt=0.0, le=64.0, validation_alias="LEAN_SANDBOX_CPU",
     )
     lean_sandbox_mem_mb: int = Field(
-        default=8192,
-        validation_alias="LEAN_SANDBOX_MEM_MB",
+        default=4096, ge=512, le=131_072, validation_alias="LEAN_SANDBOX_MEM_MB",
     )
-    lean_sandbox_network: str = Field(
-        default="none",
-        validation_alias="LEAN_SANDBOX_NETWORK",
-    )
-    lean_use_docker: bool = Field(
-        default=True,
-        validation_alias="LEMMA_USE_DOCKER",
-        description=(
-            "When true (default), validators/miners/`lemma verify` use Docker for LeanSandbox — subnet parity. "
-            "Set false only for host `lake` when toolchain matches `LEAN_SANDBOX_IMAGE` and policy allows."
-        ),
-    )
-    allow_host_lean: bool = Field(
-        default=False,
-        validation_alias="LEMMA_ALLOW_HOST_LEAN",
-        description=(
-            "If true, allow `lemma verify --host-lean`, `lemma preview --host-lean`, and "
-            "`LEMMA_PREVIEW_HOST_VERIFY` for local debugging. Production validators should leave this false."
-        ),
-    )
+    lean_sandbox_network: str = Field(default="none", validation_alias="LEAN_SANDBOX_NETWORK")
+    lean_use_docker: bool = Field(default=False, validation_alias="LEMMA_USE_DOCKER")
+    allow_host_lean: bool = Field(default=False, validation_alias="LEMMA_ALLOW_HOST_LEAN")
 
-    anthropic_api_key: str | None = Field(
-        default=None,
-        validation_alias="ANTHROPIC_API_KEY",
-    )
+    anthropic_api_key: str | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
     anthropic_model: str = Field(
-        default="claude-3-5-sonnet-20241022",
-        validation_alias="ANTHROPIC_MODEL",
+        default="claude-3-5-sonnet-20241022", validation_alias="ANTHROPIC_MODEL",
     )
-    openai_api_key: str | None = Field(
-        default=None,
-        validation_alias="OPENAI_API_KEY",
-        description="Shared fallback for OpenAI-compatible provers; prefer PROVER_OPENAI_API_KEY.",
-    )
+    openai_api_key: str | None = Field(default=None, validation_alias="OPENAI_API_KEY")
     openai_model: str = Field(
-        default="deepseek-ai/DeepSeek-V3.2-TEE",
-        validation_alias="OPENAI_MODEL",
+        default="deepseek-ai/DeepSeek-V3.2-TEE", validation_alias="OPENAI_MODEL",
     )
     openai_base_url: str = Field(
-        default="https://llm.chutes.ai/v1",
-        validation_alias="OPENAI_BASE_URL",
+        default="https://llm.chutes.ai/v1", validation_alias="OPENAI_BASE_URL",
     )
-    prover_provider: str = Field(
-        default="anthropic",
-        validation_alias="PROVER_PROVIDER",
-    )
-    prover_model: str | None = Field(
-        default=None,
-        validation_alias="PROVER_MODEL",
-        description="Miner-only model id. Use a capable proof model; see docs/models.md.",
-    )
+    prover_provider: str = Field(default="anthropic", validation_alias="PROVER_PROVIDER")
+    prover_model: str | None = Field(default=None, validation_alias="PROVER_MODEL")
     prover_max_tokens: int = Field(
-        default=32_768,
-        ge=512,
-        le=131_072,
-        validation_alias="LEMMA_PROVER_MAX_TOKENS",
-        description=(
-            "Max completion tokens for one prover call (JSON with Submission.lean). "
-            "OpenAI-compatible: sent as max_tokens. Anthropic: capped at 8192 (API limit for many models)."
-        ),
+        default=32_768, ge=512, le=131_072, validation_alias="LEMMA_PROVER_MAX_TOKENS",
     )
     prover_llm_retry_attempts: int = Field(
-        default=4,
-        ge=1,
-        le=32,
-        validation_alias="LEMMA_PROVER_LLM_RETRY_ATTEMPTS",
-        description=(
-            "How many times to call the prover LLM on transient errors (429, timeouts, 5xx) per forward. "
-            "Backoff between tries grows (capped); raising this helps saturated gateways but uses more wall time."
-        ),
+        default=4, ge=1, le=32, validation_alias="LEMMA_PROVER_LLM_RETRY_ATTEMPTS",
     )
     prover_temperature: float = Field(
-        default=0.3,
-        ge=0.0,
-        le=2.0,
-        validation_alias="LEMMA_PROVER_TEMPERATURE",
-        description="Sampling temperature for prover completions (OpenAI-compatible and Anthropic prover paths).",
+        default=0.2, ge=0.0, le=2.0, validation_alias="PROVER_TEMPERATURE",
     )
     prover_min_proof_script_chars: int = Field(
-        default=0,
-        ge=0,
-        le=500_000,
-        validation_alias="LEMMA_PROVER_MIN_PROOF_SCRIPT_CHARS",
-        description=(
-            "If > 0, reject JSON unless proof_script (full Submission.lean string) has at least this many "
-            "characters after strip. 0 = off (default). Use to force longer formal proofs on your miner."
-        ),
+        default=32, ge=0, le=100_000, validation_alias="LEMMA_PROVER_MIN_PROOF_SCRIPT_CHARS",
     )
     prover_openai_base_url: str | None = Field(
-        default=None,
-        validation_alias="PROVER_OPENAI_BASE_URL",
-        description=(
-            "Miner-only: OpenAI-compatible API base for PROVER_PROVIDER=openai. "
-            "If unset, prover uses OPENAI_BASE_URL."
-        ),
+        default=None, validation_alias="PROVER_OPENAI_BASE_URL",
     )
     prover_openai_api_key: str | None = Field(
-        default=None,
-        validation_alias="PROVER_OPENAI_API_KEY",
-        description=(
-            "Miner-only: API key for the prover’s OpenAI-compatible endpoint. "
-            "If unset, prover falls back to OPENAI_API_KEY."
-        ),
+        default=None, validation_alias="PROVER_OPENAI_API_KEY",
     )
 
     log_level: str = Field(default="INFO", validation_alias="LOG_LEVEL")
-
-    # Validator — forward query (HTTP wait derived from block height × block time)
     llm_http_timeout_s: float = Field(
-        default=900.0,
-        gt=30.0,
-        validation_alias="LEMMA_LLM_HTTP_TIMEOUT_S",
-        description=(
-            "HTTP read timeout for OpenAI-compatible + Anthropic prover calls and optional prose-judge tooling. "
-            "Should fit inside one round’s forward wait (blocks × LEMMA_BLOCK_TIME_SEC_ESTIMATE)."
-        ),
+        default=60.0, gt=0.0, le=3600.0, validation_alias="LEMMA_LLM_HTTP_TIMEOUT_S",
     )
     block_time_sec_estimate: float = Field(
-        default=12.0,
-        gt=0,
-        le=60.0,
-        validation_alias="LEMMA_BLOCK_TIME_SEC_ESTIMATE",
-        description="Rough seconds per chain block — converts remaining blocks to forward HTTP timeout.",
+        default=12.0, gt=0.0, le=120.0, validation_alias="LEMMA_BLOCK_TIME_SEC_ESTIMATE",
     )
     forward_wait_min_s: float = Field(
-        default=60.0,
-        gt=0,
-        validation_alias="LEMMA_FORWARD_WAIT_MIN_S",
-        description="Floor for forward HTTP timeout after blocks×block-time (avoid unusably short waits).",
+        default=5.0, ge=0.0, le=3600.0, validation_alias="LEMMA_FORWARD_WAIT_MIN_S",
     )
     forward_wait_max_s: float = Field(
-        default=86400.0,
-        gt=0,
-        validation_alias="LEMMA_FORWARD_WAIT_MAX_S",
-        description="Ceiling for forward HTTP timeout (safety cap even when many blocks remain).",
+        default=240.0, ge=1.0, le=3600.0, validation_alias="LEMMA_FORWARD_WAIT_MAX_S",
     )
     miner_reject_past_deadline_block: bool = Field(
-        default=True,
-        validation_alias="LEMMA_MINER_REJECT_PAST_DEADLINE_BLOCK",
-        description="If true, refuse axon work when chain head >= synapse.deadline_block (when set).",
+        default=True, validation_alias="LEMMA_MINER_REJECT_PAST_DEADLINE_BLOCK",
     )
     timeout_scale_by_split: bool = Field(
-        default=False,
-        validation_alias="LEMMA_TIMEOUT_SCALE_BY_SPLIT",
-        description=(
-            "If true, multiply forward HTTP wait and LEAN_VERIFY_TIMEOUT_S by split-specific multipliers."
-        ),
+        default=False, validation_alias="LEMMA_TIMEOUT_SCALE_BY_SPLIT",
     )
     timeout_split_easy_mult: float = Field(
-        default=1.0,
-        ge=0.1,
-        le=50.0,
-        validation_alias="LEMMA_TIMEOUT_SPLIT_EASY_MULT",
+        default=1.0, gt=0.0, le=10.0, validation_alias="LEMMA_TIMEOUT_SPLIT_EASY_MULT",
     )
     timeout_split_medium_mult: float = Field(
-        default=1.5,
-        ge=0.1,
-        le=50.0,
-        validation_alias="LEMMA_TIMEOUT_SPLIT_MEDIUM_MULT",
+        default=1.0, gt=0.0, le=10.0, validation_alias="LEMMA_TIMEOUT_SPLIT_MEDIUM_MULT",
     )
     timeout_split_hard_mult: float = Field(
-        default=2.0,
-        ge=0.1,
-        le=50.0,
-        validation_alias="LEMMA_TIMEOUT_SPLIT_HARD_MULT",
+        default=1.0, gt=0.0, le=10.0, validation_alias="LEMMA_TIMEOUT_SPLIT_HARD_MULT",
     )
     timeout_split_extreme_mult: float = Field(
-        default=3.0,
-        ge=0.1,
-        le=50.0,
-        validation_alias="LEMMA_TIMEOUT_SPLIT_EXTREME_MULT",
+        default=1.0, gt=0.0, le=10.0, validation_alias="LEMMA_TIMEOUT_SPLIT_EXTREME_MULT",
     )
     lemma_lean_verify_max_concurrent: int = Field(
-        default=4,
-        ge=1,
-        le=128,
-        validation_alias="LEMMA_LEAN_VERIFY_MAX_CONCURRENT",
-        description=(
-            "Max concurrent Lean sandbox.verify jobs per epoch (each may spawn Docker). "
-            "Raise on large validators when many miners return proofs; lower if CPU/RAM or Docker struggles."
-        ),
-    )
-    lean_verify_workspace_cache_dir: Path | None = Field(
-        default=None,
-        validation_alias="LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR",
-        description=(
-            "Optional directory on fast local disk to reuse a warm `.lake` per theorem template. "
-            "After the first passing verify for a template, later verifies only rebuild ``Submission`` "
-            "(same subnet epoch = same template for all miners). Creates bounded warm-slot subdirs."
-        ),
-    )
-    lemma_lean_workspace_cache_max_dirs: int = Field(
-        default=8,
-        ge=0,
-        le=10_000,
-        validation_alias="LEMMA_LEAN_WORKSPACE_CACHE_MAX_DIRS",
-        description=(
-            "Maximum warm workspace cache directories to keep under LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR. "
-            "Default 8; set 0 to disable automatic pruning."
-        ),
-    )
-    lemma_lean_workspace_cache_max_bytes: int = Field(
-        default=16 * 1024 * 1024 * 1024,
-        ge=0,
-        validation_alias="LEMMA_LEAN_WORKSPACE_CACHE_MAX_BYTES",
-        description=(
-            "Maximum total bytes for warm workspace cache directories under "
-            "LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR. Default 16 GiB; set 0 to disable byte pruning."
-        ),
-    )
-    lemma_lean_workspace_cache_include_submission_hash: bool = Field(
-        default=False,
-        validation_alias="LEMMA_LEAN_WORKSPACE_CACHE_INCLUDE_SUBMISSION_HASH",
-        description=(
-            "If true, cache slot names include a truncated SHA256 of Submission.lean (distinct proofs never "
-            "share a directory; more disk vs template-only keys). Default false."
-        ),
-    )
-    lemma_lean_proof_metrics_enabled: bool = Field(
-        default=False,
-        validation_alias="LEMMA_LEAN_PROOF_METRICS",
-        description=(
-            "Opt-in compare-only Lean proof metrics in VerifyResult. Does not affect rewards or weights."
-        ),
-    )
-    lemma_lean_docker_worker: str | None = Field(
-        default=None,
-        validation_alias="LEMMA_LEAN_DOCKER_WORKER",
-        description=(
-            "Name of a **running** sandbox container: Lemma uses `docker exec` instead of `docker run` per "
-            "verify (much lower latency). Must bind-mount `LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR` — see "
-            "docs/validator.md and scripts/start_lean_docker_worker.sh."
-        ),
-    )
-    set_weights_max_retries: int = Field(
-        default=3,
-        ge=1,
-        le=20,
-        validation_alias="SET_WEIGHTS_MAX_RETRIES",
-    )
-    set_weights_retry_delay_s: float = Field(
-        default=2.0,
-        ge=0.1,
-        validation_alias="SET_WEIGHTS_RETRY_DELAY_S",
-    )
-    empty_epoch_weights_policy: Literal["skip", "uniform"] = Field(
-        default="skip",
-        validation_alias="EMPTY_EPOCH_WEIGHTS_POLICY",
-        description=(
-            "Legacy empty-epoch policy. Difficulty-weighted rolling scoring skips set_weights when every "
-            "eligible UID has zero rolling score."
-        ),
-    )
-    validator_abort_if_not_registered: bool = Field(
-        default=False,
-        validation_alias="VALIDATOR_ABORT_IF_NOT_REGISTERED",
-        description="If true, skip epochs when this wallet has no UID on the subnet.",
-    )
-    validator_min_free_bytes: int = Field(
-        default=1024 * 1024 * 1024,
-        ge=0,
-        validation_alias="LEMMA_VALIDATOR_MIN_FREE_BYTES",
-        description=(
-            "Minimum free bytes required on `/` and the Lean workspace cache filesystem before an epoch queries "
-            "miners. Default 1 GiB; set 0 to disable disk preflight."
-        ),
-    )
-    training_export_jsonl: Path | None = Field(
-        default=None,
-        validation_alias="LEMMA_TRAINING_EXPORT_JSONL",
-        description="Append one JSON object per scored miner per epoch.",
-    )
-    lemma_training_export_profile: Literal["full", "summary"] = Field(
-        default="full",
-        validation_alias="LEMMA_TRAINING_EXPORT_PROFILE",
-        description=(
-            "`full`: schema v3 includes proof_script, optional labels, validator_weight. "
-            "`summary`: schema v2 omits proof, labels, metrics, and weights."
-        ),
+        default=4, ge=1, le=64, validation_alias="LEMMA_LEAN_VERIFY_MAX_CONCURRENT",
     )
 
-    # Scoring / incentive policy (validators)
+    lean_verify_workspace_cache_dir: Path | None = Field(
+        default=None, validation_alias="LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR",
+    )
+    lemma_lean_workspace_cache_max_dirs: int = Field(
+        default=10, ge=1, le=1_000, validation_alias="LEMMA_LEAN_WORKSPACE_CACHE_MAX_DIRS",
+    )
+    lemma_lean_workspace_cache_max_bytes: int = Field(
+        default=8 * 1024 * 1024 * 1024,
+        ge=0,
+        validation_alias="LEMMA_LEAN_WORKSPACE_CACHE_MAX_BYTES",
+    )
+    lemma_lean_workspace_cache_include_submission_hash: bool = Field(
+        default=False, validation_alias="LEMMA_LEAN_WORKSPACE_CACHE_INCLUDE_SUBMISSION_HASH",
+    )
+    lemma_lean_proof_metrics_enabled: bool = Field(
+        default=False, validation_alias="LEMMA_LEAN_PROOF_METRICS_ENABLED",
+    )
+    lemma_lean_docker_worker: str | None = Field(
+        default=None, validation_alias="LEMMA_LEAN_DOCKER_WORKER",
+    )
+
+    set_weights_max_retries: int = Field(
+        default=3, ge=1, le=20, validation_alias="SET_WEIGHTS_MAX_RETRIES",
+    )
+    set_weights_retry_delay_s: float = Field(
+        default=2.0, ge=0.1, validation_alias="SET_WEIGHTS_RETRY_DELAY_S",
+    )
+    empty_epoch_weights_policy: Literal["skip", "uniform"] = Field(
+        default="skip", validation_alias="LEMMA_EMPTY_EPOCH_WEIGHTS_POLICY",
+    )
+    validator_abort_if_not_registered: bool = Field(
+        default=True, validation_alias="VALIDATOR_ABORT_IF_NOT_REGISTERED",
+    )
+    validator_min_free_bytes: int = Field(
+        default=2 * 1024 * 1024 * 1024,
+        ge=0,
+        validation_alias="VALIDATOR_MIN_FREE_BYTES",
+    )
+
+    training_export_jsonl: Path | None = Field(
+        default=None, validation_alias="LEMMA_TRAINING_EXPORT_JSONL",
+    )
+    lemma_training_export_profile: Literal["full", "summary"] = Field(
+        default="full", validation_alias="LEMMA_TRAINING_EXPORT_PROFILE",
+    )
+
     lemma_scoring_coldkey_partition: bool = Field(
-        default=True,
-        validation_alias="LEMMA_SCORING_COLDKEY_PARTITION",
-        description="Cap same-coldkey hotkeys to one allocation and split it among those hotkeys.",
+        default=True, validation_alias="LEMMA_SCORING_COLDKEY_PARTITION",
     )
     lemma_scoring_rolling_alpha: float = Field(
-        default=0.08,
-        ge=0.0,
-        le=1.0,
-        validation_alias="LEMMA_SCORING_ROLLING_ALPHA",
-        description="EMA alpha for difficulty-weighted per-UID rolling proof scores.",
+        default=0.08, gt=0.0, le=1.0, validation_alias="LEMMA_SCORING_ROLLING_ALPHA",
     )
     lemma_scoring_difficulty_easy: float = Field(
-        default=1.0,
-        ge=0.0,
-        validation_alias="LEMMA_SCORING_DIFFICULTY_EASY",
-        description="Rolling-score impact multiplier for easy problems.",
+        default=1.0, ge=0.0, le=10.0, validation_alias="LEMMA_SCORING_DIFFICULTY_EASY",
     )
     lemma_scoring_difficulty_medium: float = Field(
-        default=2.0,
-        ge=0.0,
-        validation_alias="LEMMA_SCORING_DIFFICULTY_MEDIUM",
-        description="Rolling-score impact multiplier for medium problems.",
+        default=1.0, ge=0.0, le=10.0, validation_alias="LEMMA_SCORING_DIFFICULTY_MEDIUM",
     )
     lemma_scoring_difficulty_hard: float = Field(
-        default=4.0,
-        ge=0.0,
-        validation_alias="LEMMA_SCORING_DIFFICULTY_HARD",
-        description="Rolling-score impact multiplier for hard problems.",
+        default=1.0, ge=0.0, le=10.0, validation_alias="LEMMA_SCORING_DIFFICULTY_HARD",
     )
     lemma_scoring_difficulty_extreme: float = Field(
-        default=8.0,
-        ge=0.0,
-        validation_alias="LEMMA_SCORING_DIFFICULTY_EXTREME",
-        description="Rolling-score impact multiplier for extreme problems.",
+        default=1.0, ge=0.0, le=10.0, validation_alias="LEMMA_SCORING_DIFFICULTY_EXTREME",
     )
     lemma_uid_variant_problems: bool = Field(
-        default=False,
-        validation_alias="LEMMA_UID_VARIANT_PROBLEMS",
-        description="Give each queried UID a deterministic same-split theorem variant.",
+        default=False, validation_alias="LEMMA_UID_VARIANT_PROBLEMS",
     )
     lemma_reputation_ema_alpha: float = Field(
-        default=0.08,
-        ge=0.0,
-        le=1.0,
-        validation_alias="LEMMA_REPUTATION_EMA_ALPHA",
-        description="Legacy EMA smoothing setting kept for loading old reputation state.",
-    )
-    lemma_reputation_credibility_exponent: float = Field(
-        default=1.0,
-        ge=0.0,
-        le=4.0,
-        validation_alias="LEMMA_REPUTATION_CREDIBILITY_EXPONENT",
-        description=(
-            "Legacy verify-credibility exponent kept for compatibility with old reputation state."
-        ),
-    )
-    lemma_reputation_verify_credibility_alpha: float = Field(
-        default=0.08,
-        ge=0.0,
-        le=1.0,
-        validation_alias="LEMMA_REPUTATION_VERIFY_CREDIBILITY_ALPHA",
-        description=(
-            "EMA alpha for per-UID verify credibility (1.0 = Lean verify passed, 0.0 = failed). "
-            "0 disables updates; new UIDs start at credibility 1.0."
-        ),
+        default=0.08, gt=0.0, le=1.0, validation_alias="LEMMA_REPUTATION_EMA_ALPHA",
     )
     lemma_reputation_state_path: Path | None = Field(
-        default=None,
-        validation_alias="LEMMA_REPUTATION_STATE_PATH",
-        description="JSON file for per-UID rolling score state (default: ~/.lemma/validator_reputation.json).",
+        default=None, validation_alias="LEMMA_REPUTATION_STATE_PATH",
     )
     lemma_epoch_problem_count: int = Field(
-        default=1,
-        ge=1,
-        le=32,
-        validation_alias="LEMMA_EPOCH_PROBLEM_COUNT",
-        description="Number of distinct theorems sampled per validator epoch (sequential miner queries).",
+        default=1, ge=1, le=64, validation_alias="LEMMA_EPOCH_PROBLEM_COUNT",
     )
     lemma_commit_reveal_enabled: bool = Field(
-        default=False,
-        validation_alias="LEMMA_COMMIT_REVEAL_ENABLED",
-        description=(
-            "Two-phase challenge: validator queries commit (hash) then reveal (proof + nonce). "
-            "See docs/commit-reveal.md and lemma/protocol_commit_reveal.py."
-        ),
+        default=False, validation_alias="LEMMA_COMMIT_REVEAL_ENABLED",
     )
-    # Miner — resource limits and validator gate
+
     miner_min_validator_stake: float = Field(
-        default=0.0,
-        ge=0.0,
-        validation_alias="MINER_MIN_VALIDATOR_STAKE",
-        description="Minimum metagraph stake (TAO) for caller hotkey; 0 disables check.",
+        default=0.0, ge=0.0, validation_alias="MINER_MIN_VALIDATOR_STAKE",
     )
     miner_metagraph_refresh_s: float = Field(
-        default=300.0,
-        ge=5.0,
-        validation_alias="MINER_METAGRAPH_REFRESH_S",
+        default=180.0, ge=10.0, validation_alias="MINER_METAGRAPH_REFRESH_S",
     )
     miner_max_concurrent_forwards: int = Field(
-        default=8,
-        ge=1,
-        le=256,
-        validation_alias="MINER_MAX_CONCURRENT_FORWARDS",
-    )
-    miner_max_forwards_per_day: int = Field(
-        default=0,
-        ge=0,
-        validation_alias="MINER_MAX_FORWARDS_PER_DAY",
-        description="If >0, refuse new forwards after this many successful invokes per UTC day (0=unlimited).",
+        default=4, ge=1, le=64, validation_alias="MINER_MAX_CONCURRENT_FORWARDS",
     )
     miner_require_validator_permit: bool = Field(
-        default=False,
-        validation_alias="MINER_REQUIRE_VALIDATOR_PERMIT",
+        default=False, validation_alias="MINER_REQUIRE_VALIDATOR_PERMIT",
     )
     miner_priority_by_stake: bool = Field(
-        default=False,
-        validation_alias="MINER_PRIORITY_BY_STAKE",
-        description="Use validator stake as axon priority (requires periodic metagraph sync).",
+        default=False, validation_alias="MINER_PRIORITY_BY_STAKE",
     )
-    miner_log_forwards: bool = Field(
-        default=False,
-        validation_alias="LEMMA_MINER_LOG_FORWARDS",
-        description="Log proof_script for each forward (excerpt at INFO).",
-    )
+    miner_log_forwards: bool = Field(default=False, validation_alias="MINER_LOG_FORWARDS")
     miner_forward_summary: bool = Field(
-        default=True,
-        validation_alias="LEMMA_MINER_FORWARD_SUMMARY",
-        description=(
-            "One INFO line per forward: theorem id, split, sizes, timing; optional session totals. "
-            "Disable for quieter logs."
-        ),
+        default=False, validation_alias="MINER_FORWARD_SUMMARY",
     )
     miner_forward_timeline: bool = Field(
-        default=False,
-        validation_alias="LEMMA_MINER_FORWARD_TIMELINE",
-        description=(
-            "Per forward, log three INFO lines: (1) RECEIVE with deadline vs chain head, (2) SOLVED after prover, "
-            "(3) OUTCOME with local_lean or hint to enable LEMMA_MINER_LOCAL_VERIFY. "
-            "Final validator proof score is not returned on the axon."
-        ),
+        default=False, validation_alias="MINER_FORWARD_TIMELINE",
     )
     miner_local_verify: bool = Field(
-        default=False,
-        validation_alias="LEMMA_MINER_LOCAL_VERIFY",
-        description="Run Lean sandbox on Submission.lean after prover returns (same Docker/host as validators).",
+        default=False, validation_alias="LEMMA_MINER_LOCAL_VERIFY",
     )
-    synapse_max_statement_chars: int = Field(
-        default=500_000,
-        ge=1024,
-        validation_alias="SYNAPSE_MAX_STATEMENT_CHARS",
+    lemma_inbound_max_chars: int = Field(
+        default=500_000, ge=1024, validation_alias="LEMMA_INBOUND_MAX_CHARS",
     )
-    synapse_max_proof_chars: int = Field(
-        default=500_000,
-        ge=1024,
-        validation_alias="SYNAPSE_MAX_PROOF_CHARS",
-    )
+
     def prover_openai_base_url_resolved(self) -> str:
-        """OpenAI-compatible base URL for the miner prover; defaults to ``OPENAI_BASE_URL``."""
         p = (self.prover_openai_base_url or "").strip()
         return p if p else (self.openai_base_url or "").strip()
 
     def prover_openai_api_key_resolved(self) -> str | None:
-        """API key for prover when ``PROVER_PROVIDER=openai``; falls back to ``OPENAI_API_KEY``."""
         return _stripped_or_none(self.prover_openai_api_key) or _stripped_or_none(self.openai_api_key)
 
-
     def validator_wallet_names(self) -> tuple[str, str]:
-        """Cold/hot key names for signing and metagraph (validator). Falls back to BT_WALLET_*."""
-        c = (self.validator_wallet_cold or "").strip()
-        h = (self.validator_wallet_hot or "").strip()
-        return (c or self.wallet_cold, h or self.wallet_hot)
+        return (self.wallet_cold, self.wallet_hot)
