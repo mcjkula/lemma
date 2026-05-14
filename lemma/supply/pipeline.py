@@ -41,8 +41,8 @@ def _draw_from_streams(
     out: list[Problem] = []
     for key, ratio in ratios:
         source = streams.get(key)
-        n = max(0, round(count * ratio))
-        if source is None or n <= 0:
+        n = round(count * ratio)
+        if source is None or n == 0:
             continue
         seed = hashlib.sha256(f"{epoch_id}:{key}".encode()).digest()
         out.extend(source.draw(epoch_id, n, seed))
@@ -59,7 +59,7 @@ def build_batch(
     ratios: tuple[tuple[str, float], ...] = _DEFAULT_RATIOS,
     skip_baseline_filter: bool = False,
 ) -> SupplyBatch:
-    candidates = _draw_from_streams(streams, epoch_id, max(1, target_count * 2), ratios)
+    candidates = _draw_from_streams(streams, epoch_id, target_count * 2, ratios)
     registry = FreshnessRegistry(freshness_path, settings.lemma_supply_public_corpus_bloom_path)
     accepted: list[Problem] = []
     hashes: list[str] = []

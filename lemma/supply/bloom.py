@@ -72,7 +72,4 @@ class BloomFilter:
     def load(cls, path: Path) -> BloomFilter | None:
         if not path.is_file():
             return None
-        try:
-            return cls.from_bytes(path.read_bytes())
-        except (ValueError, OSError):
-            return None
+        return cls.from_bytes(path.read_bytes())
