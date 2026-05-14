@@ -1,10 +1,12 @@
-"""Materialize a per-problem Lake workspace for sandbox verification."""
+"""Lake workspace contents for sandbox verification.
+
+The sandbox writes these files into the worker container (no host filesystem cache);
+the bash verify script seeds ``.lake`` from the pre-baked stub on cold runs.
+"""
 
 from __future__ import annotations
 
 import hashlib
-import shutil
-from pathlib import Path
 
 from lemma.problems.base import Problem
 
@@ -50,18 +52,15 @@ name = "Submission"
 '''
 
 
-def materialize_workspace(
-    dest: Path, problem: Problem, submission_lean: str, *, preserve_lake: bool = False,
-) -> None:
-    if not (preserve_lake and dest.exists() and (dest / ".lake").is_dir()):
-        if dest.exists():
-            shutil.rmtree(dest)
-        dest.mkdir(parents=True)
-    (dest / "Challenge.lean").write_text(problem.challenge_source(), encoding="utf-8")
-    (dest / "Solution.lean").write_text(problem.solution_source(), encoding="utf-8")
-    (dest / "Submission.lean").write_text(submission_lean, encoding="utf-8")
-    (dest / "lean-toolchain").write_text(problem.lean_toolchain.strip() + "\n", encoding="utf-8")
-    (dest / "lakefile.toml").write_text(_LAKEFILE.format(rev=problem.mathlib_rev), encoding="utf-8")
-    (dest / "AxiomCheck.lean").write_text(
-        f"import Submission\n\n#print axioms Submission.{problem.theorem_name}\n", encoding="utf-8",
-    )
+def workspace_files(problem: Problem, submission_lean: str) -> dict[str, str]:
+    """Filename → content for one verify workspace. ``.lake`` is seeded by the verify script."""
+    return {
+        "Challenge.lean": problem.challenge_source(),
+        "Solution.lean": problem.solution_source(),
+        "Submission.lean": submission_lean,
+        "lean-toolchain": problem.lean_toolchain.strip() + "\n",
+        "lakefile.toml": _LAKEFILE.format(rev=problem.mathlib_rev),
+        "AxiomCheck.lean": (
+            f"import Submission\n\n#print axioms Submission.{problem.theorem_name}\n"
+        ),
+    }

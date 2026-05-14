@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Long-lived Lean sandbox container for fast `docker exec` verify (see docs/validator.md).
-# Reads LEAN_SANDBOX_IMAGE, LEMMA_LEAN_DOCKER_WORKER, LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR from env / .env.
+# Long-lived Lean sandbox container for fast `docker exec` verify.
+# The worker mounts a Docker named volume at /lemma-workspace for its build cache.
+# Reads LEAN_SANDBOX_IMAGE, LEMMA_LEAN_DOCKER_WORKER, LEMMA_LEAN_CACHE_VOLUME from env / .env.
 #
 # Usage:
 #   ./scripts/start_lean_docker_worker.sh
@@ -20,30 +21,19 @@ fi
 
 IMAGE="${LEAN_SANDBOX_IMAGE:-lemma/lean-sandbox:latest}"
 NAME="${LEMMA_LEAN_DOCKER_WORKER:-lemma-lean-worker}"
-CACHE="${LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR:-}"
+VOLUME="${LEMMA_LEAN_CACHE_VOLUME:-lemma-lean-cache}"
 MOUNT="${LEMMA_LEAN_DOCKER_WORKER_MOUNT:-/lemma-workspace}"
 NET="${LEAN_SANDBOX_NETWORK:-none}"
 
-if [[ -z "${CACHE}" ]]; then
-  echo "error: set LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR to the host path mounted at ${MOUNT} in the worker."
-  echo "  Example: export LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR=/var/lib/lemma-lean-cache"
-  exit 1
-fi
-
+docker volume create "${VOLUME}" >/dev/null
 docker rm -f "${NAME}" >/dev/null 2>&1 || true
-# Docker Desktop (macOS): :delegated speeds container writes on bind mounts; ignored on Linux.
-if [[ "$(uname -s)" == "Darwin" ]]; then
-  VOLARG=(-v "${CACHE}:${MOUNT}:delegated")
-else
-  VOLARG=(-v "${CACHE}:${MOUNT}:rw")
-fi
 docker run -d --name "${NAME}" --restart unless-stopped \
   --network "${NET}" \
-  "${VOLARG[@]}" \
+  -v "${VOLUME}:${MOUNT}" \
   "${IMAGE}" sleep infinity
 
 echo "Started worker container: ${NAME}"
-echo "  image=${IMAGE}  mount  ${CACHE} -> ${MOUNT}  network=${NET}"
+echo "  image=${IMAGE}  volume=${VOLUME} -> ${MOUNT}  network=${NET}"
 
 ENV_FILE="${ROOT}/.env"
 if [[ "${UPDATE_DOTENV}" -eq 1 ]] && [[ -f "${ENV_FILE}" ]]; then

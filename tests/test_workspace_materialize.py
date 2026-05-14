@@ -1,9 +1,7 @@
-"""Lake workspace materialize + template cache key."""
-
-from pathlib import Path
+"""Lake workspace files + template cache key."""
 
 from lemma.lean.workspace import (
-    materialize_workspace,
+    workspace_files,
     workspace_template_cache_key,
     workspace_verify_cache_key,
 )
@@ -43,13 +41,14 @@ def test_workspace_verify_cache_key_splits_on_proof_when_enabled() -> None:
     assert "_" in a
 
 
-def test_materialize_preserve_lake_keeps_dot_lake(tmp_path: Path) -> None:
+def test_workspace_files_includes_required_sources() -> None:
     p = _minimal_problem()
-    dest = tmp_path / "work"
-    dest.mkdir()
-    (dest / ".lake").mkdir()
-    (dest / ".lake" / "warm_marker").write_text("ok", encoding="utf-8")
-    materialize_workspace(dest, p, "namespace Submission\n", preserve_lake=True)
-    assert (dest / ".lake" / "warm_marker").read_text() == "ok"
-    assert (dest / "Submission.lean").read_text().startswith("namespace Submission")
-
+    files = workspace_files(p, "namespace Submission\nend Submission\n")
+    assert set(files.keys()) == {
+        "Challenge.lean", "Solution.lean", "Submission.lean",
+        "lean-toolchain", "lakefile.toml", "AxiomCheck.lean",
+    }
+    assert files["Submission.lean"].startswith("namespace Submission")
+    assert "Submission.t_test" in files["AxiomCheck.lean"]
+    assert files["lean-toolchain"].strip() == p.lean_toolchain
+    assert p.mathlib_rev in files["lakefile.toml"]

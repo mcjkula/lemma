@@ -67,8 +67,8 @@ class LemmaSettings(BaseSettings):
     lemma_lean_verify_max_concurrent: int = Field(
         default=4, ge=1, le=64, validation_alias="LEMMA_LEAN_VERIFY_MAX_CONCURRENT",
     )
-    lean_verify_workspace_cache_dir: Path | None = Field(
-        default=None, validation_alias="LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR",
+    lemma_lean_workspace_cache_enabled: bool = Field(
+        default=True, validation_alias="LEMMA_LEAN_WORKSPACE_CACHE_ENABLED",
     )
     lemma_lean_workspace_cache_max_dirs: int = Field(
         default=8, ge=0, le=1_000, validation_alias="LEMMA_LEAN_WORKSPACE_CACHE_MAX_DIRS",

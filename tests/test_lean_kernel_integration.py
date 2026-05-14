@@ -10,20 +10,17 @@ Required environment (mirrors how a real validator runs):
   LEMMA_LEAN_INTEGRATION=1
   LEMMA_USE_DOCKER=true                # required by validator startup
   LEMMA_LEAN_DOCKER_WORKER=<container>  # docker ps -f name=<container>
-  LEMMA_LEAN_DOCKER_WORKER_HOST_ROOT=<host workspace cache root>
-  LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR=<same dir, also mounted into worker>
 
 Setup recipe (one-time):
 
   docker build -f compose/lean.Dockerfile -t lemma/lean-sandbox:latest .
+  docker volume create lemma-lean-cache
   docker run -d --name lean-worker \\
-      -v /tmp/lemma-cache:/lemma-workspace \\
+      -v lemma-lean-cache:/lemma-workspace \\
       lemma/lean-sandbox:latest sleep infinity
   LEMMA_LEAN_INTEGRATION=1 \\
   LEMMA_USE_DOCKER=true \\
   LEMMA_LEAN_DOCKER_WORKER=lean-worker \\
-  LEMMA_LEAN_DOCKER_WORKER_HOST_ROOT=/tmp/lemma-cache \\
-  LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR=/tmp/lemma-cache \\
       uv run pytest tests/test_lean_kernel_integration.py -v
 """
 
@@ -32,7 +29,6 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
-from pathlib import Path
 
 import pytest
 from lemma.common.config import LemmaSettings
@@ -71,8 +67,6 @@ def _worker_running(name: str) -> bool:
 
 
 WORKER = os.environ.get("LEMMA_LEAN_DOCKER_WORKER", "").strip()
-HOST_ROOT = os.environ.get("LEMMA_LEAN_DOCKER_WORKER_HOST_ROOT", "").strip()
-CACHE_DIR = os.environ.get("LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR", "").strip()
 
 _SKIP_REASON = (
     "Lean kernel integration test — set LEMMA_LEAN_INTEGRATION=1 and run a "
@@ -88,8 +82,6 @@ pytestmark = [
         not _worker_running(WORKER),
         reason=f"worker container {WORKER!r} not running — `docker ps -f name={WORKER}` is empty",
     ),
-    pytest.mark.skipif(not HOST_ROOT, reason="LEMMA_LEAN_DOCKER_WORKER_HOST_ROOT not set"),
-    pytest.mark.skipif(not CACHE_DIR, reason="LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR not set"),
 ]
 
 
@@ -97,7 +89,6 @@ def _settings() -> LemmaSettings:
     return LemmaSettings().model_copy(update={
         "lean_use_docker": True,
         "lemma_lean_docker_worker": WORKER,
-        "lean_verify_workspace_cache_dir": Path(CACHE_DIR),
         "lean_verify_timeout_s": 3600,
     })
 
@@ -119,7 +110,11 @@ def test_lean_kernel_accepts_valid_proof() -> None:
     submission = (
         "import Mathlib\n"
         "\n"
+        "namespace Submission\n"
+        "\n"
         "theorem integration_trivial : True := True.intro\n"
+        "\n"
+        "end Submission\n"
     )
     result = run_lean_verify(
         _settings(), verify_timeout_s=3600, problem=_problem(), proof_script=submission,
@@ -138,8 +133,12 @@ def test_lean_kernel_rejects_malformed_proof() -> None:
     submission = (
         "import Mathlib\n"
         "\n"
+        "namespace Submission\n"
+        "\n"
         "theorem integration_trivial : True := by\n"
         "  bogus_tactic\n"
+        "\n"
+        "end Submission\n"
     )
     result = run_lean_verify(
         _settings(), verify_timeout_s=3600, problem=_problem(), proof_script=submission,
@@ -153,7 +152,11 @@ def test_lean_kernel_rejects_sorry() -> None:
     submission = (
         "import Mathlib\n"
         "\n"
+        "namespace Submission\n"
+        "\n"
         "theorem integration_trivial : True := by sorry\n"
+        "\n"
+        "end Submission\n"
     )
     result = run_lean_verify(
         _settings(), verify_timeout_s=3600, problem=_problem(), proof_script=submission,
