@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import bittensor
+
 from lemma.lean import DEFAULT_LEAN_TOOLCHAIN, DEFAULT_MATHLIB_REV
 from lemma.problems.base import Problem
 from lemma.supply.base import Source
@@ -115,8 +117,8 @@ def build_problems_for_epoch(
     *,
     epoch_id: int,
     target_count: int,
-    subtensor: object,
-    wallet: object,
+    subtensor: bittensor.Subtensor | None,
+    wallet: bittensor.Wallet,
 ) -> tuple[list[Problem], int]:
     """Compose streams, run pipeline, anchor batch Merkle root; return ``(problems, anchored_block)``."""
     batch = build_batch(

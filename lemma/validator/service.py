@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import os
 
+import bittensor
 from loguru import logger
 
 import lemma.validator.epoch as ep
@@ -36,7 +37,7 @@ def validator_retry_sleep_seconds(exc: BaseException, block_time_sec_estimate: f
     return 2.0
 
 
-def validator_problem_window(settings: LemmaSettings, subtensor: object, chain_head_block: int) -> tuple[int, int, str]:
+def validator_problem_window(settings: LemmaSettings, subtensor: bittensor.Subtensor, chain_head_block: int) -> tuple[int, int, str]:
     seed_head = effective_chain_head_for_problem_seed(
         int(chain_head_block), int(settings.lemma_problem_seed_chain_head_slack_blocks or 0),
     )
