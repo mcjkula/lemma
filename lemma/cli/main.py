@@ -450,40 +450,11 @@ def configure_prover_retries_cmd(env_path: Path | None) -> None:
     click.echo("Done. Miner and `lemma preview` pick this up on next run.")
 
 
-@configure_group.command("subnet-pins")
-@click.option("--env-file", "env_path", type=click.Path(dir_okay=False, path_type=Path))
-@click.option("--yes", "-y", is_flag=True, help="Skip confirmation.")
-def configure_subnet_pins_cmd(env_path: Path | None, yes: bool) -> None:
-    """Write expected subnet hash pins from the current Lemma checkout."""
-    from lemma.cli.env_file import merge_dotenv
-    from lemma.cli.env_wizard import collect_subnet_pin_updates
-
-    path = _env_path(env_path)
-    updates = collect_subnet_pin_updates(LemmaSettings())
-    click.echo("")
-    click.echo(stylize("Configure — subnet pins", fg="cyan", bold=True))
-    click.echo("Will write")
-    for key, value in updates.items():
-        click.echo(stylize(f"  {key}=", fg="yellow", bold=True) + stylize(value, fg="green"))
-    click.echo("")
-    if not yes:
-        click.confirm(f"Merge these lines into {path}?", abort=True)
-    click.echo(stylize(f"Merging into {path}", dim=True))
-    merge_dotenv(path, updates)
-    click.echo(stylize("Done — pins saved.", fg="green", bold=True))
-
-
 @main.command("meta")
-@click.option(
-    "--raw",
-    is_flag=True,
-    help="Compact key=value lines (best for scripts and copy-paste diffs).",
-)
-def meta_cmd(raw: bool) -> None:
-    """Canonical fingerprints: problem supply + validator scoring profile."""
+def meta_cmd() -> None:
+    """Canonical fingerprints: problem supply registry."""
     import json
 
-    from lemma.judge.profile import judge_profile_dict, judge_profile_sha256
     from lemma.problems.generated import generated_registry_canonical_dict, generated_registry_sha256
     from lemma.problems.hybrid import problem_supply_registry_canonical_dict, problem_supply_registry_sha256
 
@@ -493,37 +464,17 @@ def meta_cmd(raw: bool) -> None:
         generated_weight=s.lemma_hybrid_generated_weight,
         catalog_weight=s.lemma_hybrid_catalog_weight,
     )
-    prof = judge_profile_dict(s)
-    prof_sha = judge_profile_sha256(s)
-
-    if raw:
-        reg = generated_registry_canonical_dict()
-        supply = problem_supply_registry_canonical_dict(
-            generated_weight=s.lemma_hybrid_generated_weight,
-            catalog_weight=s.lemma_hybrid_catalog_weight,
-        )
-        click.echo(f"lemma_version={__version__}")
-        click.echo(f"problem_source={s.problem_source}")
-        click.echo(f"problem_supply_registry_sha256={supply_sha}")
-        click.echo("problem_supply_registry_json=" + json.dumps(supply, sort_keys=True))
-        click.echo(f"generated_registry_sha256={reg_sha}")
-        click.echo("generated_registry_json=" + json.dumps(reg, sort_keys=True))
-        click.echo(f"validator_profile_sha256={prof_sha}")
-        click.echo("validator_profile_json=" + json.dumps(prof, sort_keys=True))
-        return
-
-    click.echo(stylize("Subnet fingerprints", fg="cyan", bold=True))
-    click.echo(stylize("Prints canonical hashes only; it does not edit `.env`.\n", dim=True), nl=False)
-    click.echo(stylize("\nRelease\n", fg="cyan"))
-    click.echo(f"  lemma_version     {__version__}")
-    click.echo(f"  problem_source    {s.problem_source}")
-    click.echo(stylize("\nHybrid problem supply registry\n", fg="cyan"))
-    click.echo(stylize(f"  SHA256  {supply_sha}", dim=False))
-    click.echo(stylize("\nGenerated problem registry\n", fg="cyan"))
-    click.echo(stylize(f"  SHA256  {reg_sha}", dim=False))
-    click.echo(stylize("\nValidator scoring profile (your environment)\n", fg="cyan"))
-    click.echo(stylize(f"  SHA256  {prof_sha}", dim=False))
-    click.echo(stylize("\nFull canonical JSON: lemma meta --raw", dim=True))
+    reg = generated_registry_canonical_dict()
+    supply = problem_supply_registry_canonical_dict(
+        generated_weight=s.lemma_hybrid_generated_weight,
+        catalog_weight=s.lemma_hybrid_catalog_weight,
+    )
+    click.echo(f"lemma_version={__version__}")
+    click.echo(f"problem_source={s.problem_source}")
+    click.echo(f"problem_supply_registry_sha256={supply_sha}")
+    click.echo("problem_supply_registry_json=" + json.dumps(supply, sort_keys=True))
+    click.echo(f"generated_registry_sha256={reg_sha}")
+    click.echo("generated_registry_json=" + json.dumps(reg, sort_keys=True))
 
 
 def _miner_apply_daily_cap(max_forwards_per_day: int | None) -> None:
@@ -667,33 +618,6 @@ def validator_config_cmd() -> None:
     from lemma.cli.validator_config import print_validator_config
 
     print_validator_config()
-
-
-@validator_group.command("check", help="Pre-flight: chain, wallet UID, profile pins, Lean image.")
-def validator_check_group_cmd() -> None:
-    from lemma.cli.validator_check import run_validator_check
-
-    settings = LemmaSettings()
-    setup_logging(settings.log_level)
-    raise SystemExit(run_validator_check(settings))
-
-
-@validator_group.command(
-    "profile-attest-serve",
-    help=(
-        "Tiny HTTP server: GET /lemma/validator_profile_sha256. "
-        "Pair with LEMMA_VALIDATOR_PROFILE_ATTEST_PEER_URLS on other validators."
-    ),
-)
-@click.option("--host", default="127.0.0.1", show_default=True)
-@click.option("--port", default=8799, type=int, show_default=True)
-def validator_profile_attest_serve_cmd(host: str, port: int) -> None:
-    """Expose local validator profile hash for peer probes."""
-    from lemma.validator.judge_profile_attest import serve_judge_profile_attest_forever
-
-    settings = LemmaSettings()
-    setup_logging(settings.log_level)
-    serve_judge_profile_attest_forever(host, port, settings)
 
 
 @main.command("verify")

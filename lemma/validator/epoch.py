@@ -23,7 +23,6 @@ from lemma.common.problem_seed import (
 )
 from lemma.common.subtensor import get_subtensor
 from lemma.common.synapse_limits import synapse_payload_error
-from lemma.judge.profile import judge_profile_sha256
 from lemma.lean.sandbox import VerifyResult
 from lemma.lean.verify_runner import run_lean_verify
 from lemma.problems.base import Problem, ProblemSource
@@ -405,7 +404,6 @@ async def run_epoch(
     export_context = (
         {
             "lemma_version": __version__,
-            "judge_profile_sha256": judge_profile_sha256(settings),
             "generated_registry_sha256": generated_registry_sha256(),
             "problem_supply_registry_sha256": problem_supply_registry_sha256(
                 generated_weight=settings.lemma_hybrid_generated_weight,

@@ -9,12 +9,12 @@ import click
 
 from lemma.cli.env_file import merge_dotenv
 from lemma.cli.style import stylize
-from lemma.common.config import CANONICAL_JUDGE_OPENAI_MODEL, LemmaSettings
+from lemma.common.config import LemmaSettings
 
 # Default OpenAI-compatible model used as the Chutes prover preset.
 CHUTES_OPENAI_BASE_URL = "https://llm.chutes.ai/v1"
 OFFICIAL_OPENAI_BASE_URL = "https://api.openai.com/v1"
-CHUTES_DEFAULT_MODEL = CANONICAL_JUDGE_OPENAI_MODEL
+CHUTES_DEFAULT_MODEL = "deepseek-ai/DeepSeek-V3.2-TEE"
 # Matches LemmaSettings.anthropic_model default (prover falls back if PROVER_MODEL unset).
 DEFAULT_ANTHROPIC_MODEL = "claude-3-5-sonnet-20241022"
 
@@ -470,7 +470,7 @@ def collect_prover_model_updates() -> dict[str, str]:
             "this wizard writes them into .env for you). Example: ",
             dim=True,
         )
-        + stylize(CANONICAL_JUDGE_OPENAI_MODEL, fg="green")
+        + stylize("deepseek-ai/DeepSeek-V3.2-TEE", fg="green")
         + stylize(" or any capable proof model on Chutes.\n", dim=True),
         nl=False,
     )
@@ -485,12 +485,10 @@ def collect_prover_model_updates() -> dict[str, str]:
 
 
 def collect_subnet_pin_updates(settings: LemmaSettings) -> dict[str, str]:
-    """Expected-hash pins matching **current** `lemma meta`."""
-    from lemma.judge.profile import judge_profile_sha256
     from lemma.problems.generated import generated_registry_sha256
     from lemma.problems.hybrid import problem_supply_registry_sha256
 
-    out: dict[str, str] = {"LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED": judge_profile_sha256(settings).strip().lower()}
+    out: dict[str, str] = {}
     source = (settings.problem_source or "").strip().lower()
     if source == "hybrid":
         out["LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED"] = problem_supply_registry_sha256(

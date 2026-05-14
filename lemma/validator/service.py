@@ -18,11 +18,9 @@ from lemma.common.problem_seed import (
     resolve_problem_seed,
 )
 from lemma.common.subtensor import get_subtensor
-from lemma.judge.profile import judge_profile_sha256
 from lemma.problems.factory import get_problem_source
 from lemma.problems.generated import generated_registry_sha256
 from lemma.problems.hybrid import problem_supply_registry_sha256
-from lemma.validator.judge_profile_attest import judge_profile_peer_check_errors
 
 _DOCKER_REQUIRED_ERROR = (
     "lemma validator requires Docker for Lean verify (LEMMA_USE_DOCKER=true).\n"
@@ -91,22 +89,6 @@ def validator_startup_issues(settings: LemmaSettings, *, dry_run: bool) -> tuple
     if not settings.lean_use_docker:
         fatal.append(_DOCKER_REQUIRED_ERROR)
 
-    if not (settings.judge_profile_expected_sha256 or "").strip():
-        fatal.append(
-            "lemma validator requires LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED in `.env` "
-            "(run `lemma configure subnet-pins` or copy from `lemma meta --raw`).",
-        )
-    else:
-        expected_raw = (settings.judge_profile_expected_sha256 or "").strip()
-        actual_judge = judge_profile_sha256(settings).strip().lower()
-        if actual_judge != expected_raw.lower():
-            fatal.append(
-                f"validator profile mismatch: expected LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED={expected_raw!r} "
-                f"but current config hashes to {actual_judge!r}.\n"
-                "Align validator profile env with the subnet, then run `lemma configure subnet-pins` "
-                "(or set the pin to match `lemma meta` / `lemma meta --raw` manually).",
-            )
-
     problem_source = (settings.problem_source or "").strip().lower()
     if problem_source == "hybrid":
         if not (settings.problem_supply_registry_expected_sha256 or "").strip():
@@ -143,19 +125,6 @@ def validator_startup_issues(settings: LemmaSettings, *, dry_run: bool) -> tuple
                     "Use the same lemma commit as the subnet, then `lemma configure subnet-pins` "
                     "(or update the registry pin from `lemma meta --raw`).",
                 )
-    elif problem_source == "frozen" and not settings.lemma_dev_allow_frozen_problem_source:
-        fatal.append(
-            "LEMMA_PROBLEM_SOURCE=frozen requires LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1 "
-            "(public eval catalog). Use hybrid for subnet traffic — see docs/catalog-sources.md",
-        )
-
-    if settings.lemma_judge_profile_attest_enabled and settings.lemma_judge_profile_attest_allow_skip:
-        warn.append(
-            "LEMMA_VALIDATOR_PROFILE_ATTEST_SKIP=1 — peer validator profile HTTP checks skipped "
-            "(solo / dev only; not production alignment)",
-        )
-    fatal.extend(judge_profile_peer_check_errors(settings))
-
     return fatal, warn
 
 

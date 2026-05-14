@@ -7,7 +7,6 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Literal
 
-from lemma.judge.base import RubricScore
 from lemma.lean.proof_metrics import LeanProofMetrics
 from lemma.protocol import LemmaChallenge
 
@@ -53,20 +52,11 @@ def training_record(
     theorem_id: str,
     uid: int,
     resp: LemmaChallenge,
-    rubric: RubricScore | None = None,
     profile: TrainingExportProfile = "full",
     proof_metrics: LeanProofMetrics | None = None,
     coldkey: str | None = None,
     export_context: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """One JSON-serializable row for dataset export.
-
-    ``full`` (schema_version 3): proof, optional labels, optional proof metrics, and later
-    ``validator_weight`` — highest fidelity for offline analysis.
-
-    ``summary`` (schema_version 2): identifiers and provenance only — omits proof text,
-    labels, proof metrics, and incentive weights when appended (see ``append_epoch_jsonl``).
-    """
     if profile not in ("full", "summary"):
         raise ValueError(f"unsupported training export profile: {profile}")
     common = {
@@ -89,8 +79,6 @@ def training_record(
         "theorem_statement": resp.theorem_statement,
         "proof_script": resp.proof_script or "",
     }
-    if rubric is not None:
-        row["rubric"] = rubric.model_dump()
     if coldkey:
         row["coldkey"] = coldkey
     if proof_metrics is not None:

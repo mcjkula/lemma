@@ -155,15 +155,6 @@ def run_doctor() -> int:
     else:
         click.echo(stylize("   INFO  Connect chain RPC for a block-accurate timeout check.", dim=True))
 
-    if not (settings.judge_profile_expected_sha256 or "").strip():
-        click.echo(
-            stylize(
-                "   Tip   Validators: set LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED "
-                "(`lemma configure subnet-pins`; copy from `lemma meta --raw`).",
-                dim=True,
-            ),
-        )
-
     click.echo(stylize("\n4  Chain RPC", fg="cyan", bold=True))
     if chain_head is not None:
         click.echo(stylize("   OK", fg="green") + f"    head_block={chain_head}")

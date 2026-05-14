@@ -10,9 +10,6 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic_settings.sources import PydanticBaseSettingsSource
 
-# Defaults for optional one-shot prose-judge tooling.
-CANONICAL_JUDGE_OPENAI_MODEL = "deepseek-ai/DeepSeek-V3.2-TEE"
-CANONICAL_JUDGE_OPENAI_BASE_URL = "https://llm.chutes.ai/v1"
 
 
 def _stripped_or_none(value: str | None) -> str | None:
@@ -253,15 +250,6 @@ class LemmaSettings(BaseSettings):
         ),
     )
 
-    judge_provider: str = Field(
-        default="chutes",
-        validation_alias="JUDGE_PROVIDER",
-        description=(
-            "Optional prose-judge provider for one-shot research tooling. ``chutes`` and legacy ``openai`` "
-            "use OpenAI-compatible HTTP; Anthropic is local judge tooling only. Live validator scoring uses "
-            "proof verification and does not read this field."
-        ),
-    )
     anthropic_api_key: str | None = Field(
         default=None,
         validation_alias="ANTHROPIC_API_KEY",
@@ -273,72 +261,15 @@ class LemmaSettings(BaseSettings):
     openai_api_key: str | None = Field(
         default=None,
         validation_alias="OPENAI_API_KEY",
-        description=(
-            "Legacy shared fallback for optional prose-judge tooling and OpenAI-compatible provers. "
-            "Prefer JUDGE_OPENAI_API_KEY and PROVER_OPENAI_API_KEY so those keys stay separate."
-        ),
-    )
-    judge_openai_api_key: str | None = Field(
-        default=None,
-        validation_alias="JUDGE_OPENAI_API_KEY",
-        description=(
-            "Chutes/OpenAI-compatible API key used only by optional prose-judge tooling. "
-            "If unset, that tooling falls back to OPENAI_API_KEY."
-        ),
+        description="Shared fallback for OpenAI-compatible provers; prefer PROVER_OPENAI_API_KEY.",
     )
     openai_model: str = Field(
-        default=CANONICAL_JUDGE_OPENAI_MODEL,
+        default="deepseek-ai/DeepSeek-V3.2-TEE",
         validation_alias="OPENAI_MODEL",
-        description=(
-            f"Optional prose-judge model when JUDGE_PROVIDER is chutes or openai. Default: "
-            f"{CANONICAL_JUDGE_OPENAI_MODEL!r}. Miners should use PROVER_MODEL for the prover id."
-        ),
     )
     openai_base_url: str = Field(
-        default=CANONICAL_JUDGE_OPENAI_BASE_URL,
+        default="https://llm.chutes.ai/v1",
         validation_alias="OPENAI_BASE_URL",
-        description=(
-            f"Optional prose-judge API base. Default: {CANONICAL_JUDGE_OPENAI_BASE_URL!r}. "
-            "Miners may point `PROVER_OPENAI_BASE_URL` elsewhere."
-        ),
-    )
-    judge_temperature: float = Field(
-        default=0.2,
-        ge=0.0,
-        le=2.0,
-        validation_alias="JUDGE_TEMPERATURE",
-        description="Sampling temperature for OpenAI-compatible judges and local Anthropic judge tooling.",
-    )
-    judge_max_tokens: int = Field(
-        default=256,
-        ge=16,
-        le=4096,
-        validation_alias="JUDGE_MAX_TOKENS",
-        description="Max completion tokens for judge responses (short JSON rubric).",
-    )
-    judge_llm_retry_attempts: int = Field(
-        default=4,
-        ge=1,
-        le=32,
-        validation_alias="LEMMA_JUDGE_LLM_RETRY_ATTEMPTS",
-        description="Judge-only retries on 429 / timeouts / 5xx for each score() call.",
-    )
-    judge_llm_http_timeout_s: float | None = Field(
-        default=None,
-        gt=0.0,
-        validation_alias="LEMMA_JUDGE_HTTP_TIMEOUT_S",
-        description=(
-            "If set, overrides LEMMA_LLM_HTTP_TIMEOUT_S for judge HTTP reads only "
-            "(small JSON output; use a tighter cap to fail fast on stalls)."
-        ),
-    )
-    judge_profile_expected_sha256: str | None = Field(
-        default=None,
-        validation_alias="LEMMA_VALIDATOR_PROFILE_SHA256_EXPECTED",
-        description=(
-            "Expected validator profile hash. Validators must set this; startup fails unless it matches live "
-            "`lemma meta`."
-        ),
     )
     prover_provider: str = Field(
         default="anthropic",
@@ -728,39 +659,6 @@ class LemmaSettings(BaseSettings):
             "out of public docs; lemma meta exposes only a SHA256 fingerprint."
         ),
     )
-    lemma_judge_profile_attest_enabled: bool = Field(
-        default=False,
-        validation_alias="LEMMA_VALIDATOR_PROFILE_ATTEST_ENABLED",
-        description=(
-            "Optional validator-profile peer check. See LEMMA_VALIDATOR_PROFILE_ATTEST_PEER_URLS, "
-            "LEMMA_VALIDATOR_PROFILE_ATTEST_SKIP, `lemma validator profile-attest-serve`, "
-            "docs/validator-profile-attest.md."
-        ),
-    )
-    lemma_judge_profile_attest_peer_urls: str = Field(
-        default="",
-        validation_alias="LEMMA_VALIDATOR_PROFILE_ATTEST_PEER_URLS",
-        description=(
-            "Comma-separated GET URLs probed when LEMMA_VALIDATOR_PROFILE_ATTEST_ENABLED=1 "
-            "(plaintext hex or JSON with validator_profile_sha256)."
-        ),
-    )
-    lemma_judge_profile_attest_allow_skip: bool = Field(
-        default=False,
-        validation_alias="LEMMA_VALIDATOR_PROFILE_ATTEST_SKIP",
-        description=(
-            "When attest is enabled, skip peer HTTP (solo / dev only). Logs as WARN at validator startup — "
-            "not for production multi-validator alignment."
-        ),
-    )
-    lemma_judge_profile_attest_http_timeout_s: float = Field(
-        default=15.0,
-        ge=1.0,
-        le=300.0,
-        validation_alias="LEMMA_VALIDATOR_PROFILE_ATTEST_HTTP_TIMEOUT_S",
-        description="Per-URL HTTP timeout when LEMMA_VALIDATOR_PROFILE_ATTEST_ENABLED=1.",
-    )
-
     # Miner — resource limits and validator gate
     miner_min_validator_stake: float = Field(
         default=0.0,
@@ -840,9 +738,6 @@ class LemmaSettings(BaseSettings):
         """API key for prover when ``PROVER_PROVIDER=openai``; falls back to ``OPENAI_API_KEY``."""
         return _stripped_or_none(self.prover_openai_api_key) or _stripped_or_none(self.openai_api_key)
 
-    def judge_openai_api_key_resolved(self) -> str | None:
-        """API key for optional prose-judge tooling; prefers ``JUDGE_OPENAI_API_KEY``."""
-        return _stripped_or_none(self.judge_openai_api_key) or _stripped_or_none(self.openai_api_key)
 
     def validator_wallet_names(self) -> tuple[str, str]:
         """Cold/hot key names for signing and metagraph (validator). Falls back to BT_WALLET_*."""
