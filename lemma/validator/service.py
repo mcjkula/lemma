@@ -17,9 +17,7 @@ from lemma.common.problem_seed import (
 )
 from lemma.common.subtensor import get_subtensor
 
-_DOCKER_REQUIRED_ERROR = (
-    "lemma validator requires Docker for Lean verify (LEMMA_USE_DOCKER=true)."
-)
+_DOCKER_REQUIRED = "lemma validator requires Docker for Lean verify (LEMMA_USE_DOCKER=true)."
 
 
 def epoch_sleep_seconds(blocks_until_epoch: int, block_time_sec_estimate: float) -> float:
@@ -38,47 +36,29 @@ def validator_retry_sleep_seconds(exc: BaseException, block_time_sec_estimate: f
     return 2.0
 
 
-def validator_problem_window(
-    settings: LemmaSettings,
-    subtensor: object,
-    chain_head_block: int,
-) -> tuple[int, int, str]:
+def validator_problem_window(settings: LemmaSettings, subtensor: object, chain_head_block: int) -> tuple[int, int, str]:
     seed_head = effective_chain_head_for_problem_seed(
-        int(chain_head_block),
-        int(settings.lemma_problem_seed_chain_head_slack_blocks or 0),
+        int(chain_head_block), int(settings.lemma_problem_seed_chain_head_slack_blocks or 0),
     )
-    problem_seed, seed_tag = resolve_problem_seed(
-        chain_head_block=seed_head,
-        netuid=settings.netuid,
-        mode=settings.problem_seed_mode,
-        quantize_blocks=settings.problem_seed_quantize_blocks,
-        subtensor=subtensor,
+    seed, tag = resolve_problem_seed(
+        chain_head_block=seed_head, netuid=settings.netuid, mode=settings.problem_seed_mode,
+        quantize_blocks=settings.problem_seed_quantize_blocks, subtensor=subtensor,
     )
-    blocks_until_change, edge = blocks_until_challenge_may_change(
-        chain_head_block=seed_head,
-        netuid=settings.netuid,
-        mode=settings.problem_seed_mode,
-        quantize_blocks=settings.problem_seed_quantize_blocks,
-        seed_tag=seed_tag,
-        subtensor=subtensor,
+    blocks, edge = blocks_until_challenge_may_change(
+        chain_head_block=seed_head, netuid=settings.netuid, mode=settings.problem_seed_mode,
+        quantize_blocks=settings.problem_seed_quantize_blocks, seed_tag=tag, subtensor=subtensor,
     )
-    return int(problem_seed), int(blocks_until_change), edge
+    return int(seed), int(blocks), edge
 
 
 def validator_startup_issues(settings: LemmaSettings) -> list[str]:
     fatal: list[str] = []
     if not settings.lean_use_docker:
-        fatal.append(_DOCKER_REQUIRED_ERROR)
+        fatal.append(_DOCKER_REQUIRED)
     if settings.lemma_transport != "http":
-        fatal.append(
-            f"LEMMA_TRANSPORT={settings.lemma_transport!r} is unsupported; "
-            "the bt.Synapse transport was removed one generation ago. Set LEMMA_TRANSPORT=http.",
-        )
+        fatal.append(f"LEMMA_TRANSPORT={settings.lemma_transport!r} unsupported — set LEMMA_TRANSPORT=http.")
     if settings.lemma_scoring_mode != "pareto":
-        fatal.append(
-            f"LEMMA_SCORING_MODE={settings.lemma_scoring_mode!r} is unsupported; "
-            "rolling scoring was removed one generation ago. Set LEMMA_SCORING_MODE=pareto.",
-        )
+        fatal.append(f"LEMMA_SCORING_MODE={settings.lemma_scoring_mode!r} unsupported — set LEMMA_SCORING_MODE=pareto.")
     return fatal
 
 
@@ -95,22 +75,22 @@ class ValidatorService:
         if fatal:
             raise SystemExit(fatal[0])
         subtensor = get_subtensor(s)
-        last_problem_seed: int | None = None
+        last_seed: int | None = None
         while True:
             try:
-                chain_head = int(subtensor.get_current_block())
-                problem_seed, blocks_until_change, edge = validator_problem_window(s, subtensor, chain_head)
-                if last_problem_seed != problem_seed:
+                head = int(subtensor.get_current_block())
+                seed, blocks, edge = validator_problem_window(s, subtensor, head)
+                if last_seed != seed:
                     await ep.run_epoch(s, dry_run=self.dry_run)
-                    last_problem_seed = problem_seed
+                    last_seed = seed
                     await asyncio.sleep(2)
                     continue
-                wait_s = epoch_sleep_seconds(blocks_until_change, s.block_time_sec_estimate)
-                logger.debug("Waiting {:.0f}s (~{} blocks to {})", wait_s, blocks_until_change, edge)
+                wait_s = epoch_sleep_seconds(blocks, s.block_time_sec_estimate)
+                logger.debug("Waiting {:.0f}s (~{} blocks to {})", wait_s, blocks, edge)
                 await asyncio.sleep(wait_s)
             except Exception as e:  # noqa: BLE001
                 wait_s = validator_retry_sleep_seconds(e, s.block_time_sec_estimate)
-                logger.exception("validator loop skipped epoch/window after error; retry in {:.0f}s: {}", wait_s, e)
+                logger.exception("validator loop retry in {:.0f}s: {}", wait_s, e)
                 await asyncio.sleep(wait_s)
 
     def run_blocking(self) -> None:
@@ -118,14 +98,8 @@ class ValidatorService:
 
         from lemma.cli.style import finish_cli_output, stylize
 
-        click.echo(
-            stylize(
-                "Validator running — press Ctrl+C to stop and return to your shell.",
-                fg="cyan",
-                bold=True,
-            ),
-            err=True,
-        )
+        click.echo(stylize("Validator running — press Ctrl+C to stop and return to your shell.",
+                           fg="cyan", bold=True), err=True)
         try:
             asyncio.run(self.run_forever())
         except KeyboardInterrupt:

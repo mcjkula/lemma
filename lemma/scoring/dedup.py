@@ -6,20 +6,14 @@ import hashlib
 import re
 
 _IDENT = r"[a-zA-Z_][a-zA-Z0-9_']*"
-_BINDER_PATTERNS = (
-    re.compile(rf"\bintro\s+((?:{_IDENT}\s*)+)"),
-    re.compile(rf"\bintros\s+((?:{_IDENT}\s*)+)"),
-    re.compile(rf"\bfun\s+((?:{_IDENT}\s*)+?)\s*(?:=>|↦)"),
-    re.compile(rf"\bλ\s+((?:{_IDENT}\s*)+?)\s*(?:=>|↦|,)"),
-    re.compile(rf"\blet\s+({_IDENT})\b"),
-    re.compile(rf"\bobtain\s+⟨([^⟩]+)⟩"),
-    re.compile(rf"\brcases\s+\S+\s+with\s+([^\n]+)"),
-    re.compile(rf"\(\s*({_IDENT}(?:\s+{_IDENT})*)\s*:\s*[^)]+\)"),
-)
-
-
-def _collapse_ws(text: str) -> str:
-    return re.sub(r"\s+", " ", (text or "").strip())
+_BINDER_PATTERNS = tuple(re.compile(p) for p in (
+    rf"\bintro(?:s)?\s+((?:{_IDENT}\s*)+)",
+    rf"\b(?:fun|λ)\s+((?:{_IDENT}\s*)+?)\s*(?:=>|↦|,)",
+    rf"\blet\s+({_IDENT})\b",
+    rf"\bobtain\s+⟨([^⟩]+)⟩",
+    rf"\brcases\s+\S+\s+with\s+([^\n]+)",
+    rf"\(\s*({_IDENT}(?:\s+{_IDENT})*)\s*:\s*[^)]+\)",
+))
 
 
 def _strip_lean_comments(src: str) -> str:
@@ -33,34 +27,23 @@ def _strip_lean_comments(src: str) -> str:
     return "\n".join(line for line in out.splitlines() if line.strip())
 
 
-def _collect_binders(src: str) -> list[str]:
-    seen: list[str] = []
-    seen_set: set[str] = set()
-    for pat in _BINDER_PATTERNS:
-        for m in pat.finditer(src):
-            for name in re.findall(_IDENT, m.group(1)):
-                if name not in seen_set:
-                    seen.append(name)
-                    seen_set.add(name)
-    return seen
-
-
 def alpha_rename_proof(proof_script: str) -> str:
-    """Rename bound variables to ``_v0, _v1, …`` in first-appearance order."""
     body = _strip_lean_comments(proof_script)
-    names = _collect_binders(body)
-    for i, name in enumerate(names):
+    seen: list[str] = []
+    for pat in _BINDER_PATTERNS:
+        for m in pat.finditer(body):
+            for name in re.findall(_IDENT, m.group(1)):
+                if name not in seen:
+                    seen.append(name)
+    for i, name in enumerate(seen):
         body = re.sub(rf"\b{re.escape(name)}\b", f"_v{i}", body)
     return body
 
 
 def submission_fingerprint(theorem_statement: str, proof_script: str) -> str:
-    parts = (
-        _collapse_ws(theorem_statement),
-        _collapse_ws(alpha_rename_proof(proof_script)),
-    )
+    norm_theorem = re.sub(r"\s+", " ", (theorem_statement or "").strip())
+    norm_proof = re.sub(r"\s+", " ", alpha_rename_proof(proof_script).strip())
     h = hashlib.sha256()
-    for part in parts:
-        h.update(part.encode("utf-8"))
-        h.update(b"\x1e")
+    h.update(norm_theorem.encode("utf-8")); h.update(b"\x1e")
+    h.update(norm_proof.encode("utf-8")); h.update(b"\x1e")
     return h.hexdigest()

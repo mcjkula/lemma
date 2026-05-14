@@ -1,9 +1,4 @@
-"""Epistula signed-header transport.
-
-Per knowledge/sdk.quick_reference.yaml:292-326. The signature covers
-``sha256(<timestamp_ms>.<nonce>.<sender>.<receiver>.<body>)``; verifiers reject
-stale timestamps and replayed nonces.
-"""
+"""Epistula signed-header transport (knowledge/sdk.quick_reference.yaml:292-326)."""
 
 from __future__ import annotations
 
@@ -19,6 +14,14 @@ from bittensor_wallet import Keypair  # ships transitively via bittensor
 EPISTULA_VERSION: Final[str] = "2"
 DEFAULT_TIMESTAMP_SKEW_MS: Final[int] = 60_000
 REPLAY_CACHE_MAX: Final[int] = 4096
+_HEADER_KEYS = (
+    ("version", "Epistula-Version"),
+    ("timestamp_ms", "Epistula-Timestamp"),
+    ("uuid", "Epistula-Uuid"),
+    ("signed_for", "Epistula-Signed-For"),
+    ("signed_by", "Epistula-Signed-By"),
+    ("signature_hex", "Epistula-Request-Signature"),
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,59 +34,36 @@ class EpistulaHeaders:
     signature_hex: str
 
     def to_http_headers(self) -> dict[str, str]:
-        return {
-            "Epistula-Version": self.version,
-            "Epistula-Timestamp": self.timestamp_ms,
-            "Epistula-Uuid": self.uuid,
-            "Epistula-Signed-For": self.signed_for,
-            "Epistula-Signed-By": self.signed_by,
-            "Epistula-Request-Signature": self.signature_hex,
-        }
+        return {http: getattr(self, attr) for attr, http in _HEADER_KEYS}
 
     @classmethod
     def from_http_headers(cls, h: dict[str, str]) -> EpistulaHeaders | None:
         lower = {k.lower(): v for k, v in h.items()}
         try:
-            return cls(
-                version=lower["epistula-version"],
-                timestamp_ms=lower["epistula-timestamp"],
-                uuid=lower["epistula-uuid"],
-                signed_for=lower["epistula-signed-for"],
-                signed_by=lower["epistula-signed-by"],
-                signature_hex=lower["epistula-request-signature"],
-            )
+            return cls(**{attr: lower[http.lower()] for attr, http in _HEADER_KEYS})
         except KeyError:
             return None
 
 
-def _body_hash(body: bytes) -> str:
-    return hashlib.sha256(body or b"").hexdigest()
+@dataclass(frozen=True, slots=True)
+class VerifyOutcome:
+    ok: bool
+    reason: str = ""
 
 
-def _signing_message(timestamp_ms: str, uuid: str, signed_for: str, signed_by: str, body: bytes) -> bytes:
-    payload = f"{timestamp_ms}.{uuid}.{signed_by}.{signed_for}.{_body_hash(body)}"
-    return payload.encode("utf-8")
+def _signing_message(ts: str, uuid: str, signed_for: str, signed_by: str, body: bytes) -> bytes:
+    return f"{ts}.{uuid}.{signed_by}.{signed_for}.{hashlib.sha256(body or b'').hexdigest()}".encode("utf-8")
 
 
-def sign(
-    *,
-    keypair: Keypair,
-    body: bytes,
-    signed_for_ss58: str,
-    timestamp_ms: int | None = None,
-    uuid: str | None = None,
-) -> EpistulaHeaders:
+def sign(*, keypair: Keypair, body: bytes, signed_for_ss58: str,
+         timestamp_ms: int | None = None, uuid: str | None = None) -> EpistulaHeaders:
     ts = str(int(timestamp_ms if timestamp_ms is not None else time.time() * 1000))
     nonce = uuid or secrets.token_hex(16)
     msg = _signing_message(ts, nonce, signed_for_ss58, keypair.ss58_address, body)
-    sig = "0x" + keypair.sign(msg).hex()
     return EpistulaHeaders(
-        version=EPISTULA_VERSION,
-        timestamp_ms=ts,
-        uuid=nonce,
-        signed_for=signed_for_ss58,
-        signed_by=keypair.ss58_address,
-        signature_hex=sig,
+        version=EPISTULA_VERSION, timestamp_ms=ts, uuid=nonce,
+        signed_for=signed_for_ss58, signed_by=keypair.ss58_address,
+        signature_hex="0x" + keypair.sign(msg).hex(),
     )
 
 
@@ -105,21 +85,9 @@ class ReplayCache:
         return True
 
 
-@dataclass(frozen=True, slots=True)
-class VerifyOutcome:
-    ok: bool
-    reason: str = ""
-
-
-def verify(
-    *,
-    headers: EpistulaHeaders,
-    body: bytes,
-    receiver_ss58: str,
-    replay_cache: ReplayCache,
-    now_ms: int | None = None,
-    max_skew_ms: int = DEFAULT_TIMESTAMP_SKEW_MS,
-) -> VerifyOutcome:
+def verify(*, headers: EpistulaHeaders, body: bytes, receiver_ss58: str,
+           replay_cache: ReplayCache, now_ms: int | None = None,
+           max_skew_ms: int = DEFAULT_TIMESTAMP_SKEW_MS) -> VerifyOutcome:
     if headers.version != EPISTULA_VERSION:
         return VerifyOutcome(False, "version")
     if headers.signed_for != receiver_ss58:
@@ -133,22 +101,13 @@ def verify(
         return VerifyOutcome(False, "stale_timestamp")
     if not replay_cache.remember(headers.signed_by, headers.uuid):
         return VerifyOutcome(False, "replayed_nonce")
-    msg = _signing_message(
-        headers.timestamp_ms,
-        headers.uuid,
-        headers.signed_for,
-        headers.signed_by,
-        body,
-    )
-    sig_hex = headers.signature_hex.removeprefix("0x")
+    msg = _signing_message(headers.timestamp_ms, headers.uuid, headers.signed_for, headers.signed_by, body)
     try:
-        sig = bytes.fromhex(sig_hex)
+        sig = bytes.fromhex(headers.signature_hex.removeprefix("0x"))
     except ValueError:
         return VerifyOutcome(False, "bad_signature_hex")
     try:
         peer = Keypair(ss58_address=headers.signed_by)
     except Exception:  # noqa: BLE001
         return VerifyOutcome(False, "bad_sender_ss58")
-    if not peer.verify(msg, sig):
-        return VerifyOutcome(False, "bad_signature")
-    return VerifyOutcome(True)
+    return VerifyOutcome(True) if peer.verify(msg, sig) else VerifyOutcome(False, "bad_signature")

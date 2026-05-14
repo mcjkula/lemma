@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import time
 from typing import TYPE_CHECKING
 
@@ -10,55 +9,26 @@ import bittensor
 import httpx
 from loguru import logger
 
-from lemma.lean import DEFAULT_LEAN_TOOLCHAIN, DEFAULT_MATHLIB_REV
-from lemma.common.problem_seed import (
-    effective_chain_head_for_problem_seed,
-    resolve_problem_seed,
-)
+from lemma.common.problem_seed import effective_chain_head_for_problem_seed, resolve_problem_seed
 from lemma.common.subtensor import get_subtensor
-from lemma.lean.sandbox import VerifyResult
-from lemma.lean.verify_runner import run_lean_verify
-from lemma.problems.base import Problem
-from lemma.protocol import ChallengePayload, RevealPayload, from_json, to_json
+from lemma.protocol import ChallengePayload
 from lemma.scoring.champion_decay import apply_decay
-from lemma.scoring.dedup import submission_fingerprint
 from lemma.scoring.first_to_solve import Solve, rank_solvers
 from lemma.scoring.observed_difficulty import base_reward, solve_fractions
 from lemma.scoring.pareto_subset import layer_weights, pareto_layers
 from lemma.scoring.reputation import load_reputation, save_reputation
-from lemma.supply.base import Source
-from lemma.supply.competition_formal import CompetitionFormalSource
-from lemma.supply.mathlib_sorrys import MathlibSorrysSource
-from lemma.supply.perturb_mathlib import PerturbedMathlibSource
-from lemma.supply.pipeline import build_batch
-from lemma.transport.chain_commit import anchor_batch, fetch_commits
-from lemma.transport.client import signed_post
+from lemma.supply.pipeline import build_problems_for_epoch
+from lemma.transport.chain_commit import fetch_commits
+from lemma.transport.client import broadcast_challenge
 from lemma.validator.corpus import CorpusEntry, append as append_corpus
+from lemma.validator.verify import verified_solves
 from lemma.validator.weights_policy import build_full_weights
 
 if TYPE_CHECKING:
     from lemma.common.config import LemmaSettings
 
-
-_VERIFY_INFRA_REASONS = frozenset({"timeout", "oom", "docker_error", "remote_error"})
 _RANK_DECAY: float = 0.5
 _MAX_RANK_PAID: int = 10
-
-
-def _verify_result_is_infra_failure(vr: VerifyResult) -> bool:
-    return not vr.passed and vr.reason in _VERIFY_INFRA_REASONS
-
-
-def _miner_url(metagraph: bittensor.metagraph, uid: int) -> str | None:
-    try:
-        ax = metagraph.axons[uid]
-    except (IndexError, AttributeError):
-        return None
-    ip = (getattr(ax, "ip", "") or "").strip()
-    port = int(getattr(ax, "port", 0) or 0)
-    if not ip or ip == "0.0.0.0" or port <= 0:
-        return None
-    return f"http://{ip}:{port}"
 
 
 def _registration_blocks(metagraph: bittensor.metagraph) -> dict[int, int]:
@@ -74,165 +44,19 @@ def _registration_blocks(metagraph: bittensor.metagraph) -> dict[int, int]:
     return out
 
 
-async def _query_one(
-    *,
-    client: httpx.AsyncClient,
-    url: str,
-    keypair: bittensor.Keypair,
-    receiver_ss58: str,
-    body: bytes,
-    timeout_s: float,
-) -> RevealPayload | None:
-    try:
-        r = await signed_post(
-            client,
-            f"{url}/lemma/reveal",
-            body,
-            keypair=keypair,
-            signed_for_ss58=receiver_ss58,
-            timeout_s=timeout_s,
-        )
-    except httpx.HTTPError as e:
-        logger.debug("miner http error: {}", e)
-        return None
-    if r.status_code != 200:
-        return None
-    try:
-        return from_json(RevealPayload, r.content)
-    except (ValueError, TypeError):
-        return None
-
-
-async def _broadcast_theorem(
-    *,
-    client: httpx.AsyncClient,
-    settings: LemmaSettings,
-    wallet: bittensor.Wallet,
-    metagraph: bittensor.metagraph,
-    challenge: ChallengePayload,
-    timeout_s: float,
-) -> dict[int, RevealPayload]:
-    body = to_json(challenge)
-    sem = asyncio.Semaphore(max(1, settings.lemma_lean_verify_max_concurrent * 2))
-    out: dict[int, RevealPayload] = {}
-
-    async def _one(uid: int) -> None:
-        url = _miner_url(metagraph, uid)
-        if url is None:
-            return
-        async with sem:
-            reply = await _query_one(
-                client=client, url=url, keypair=wallet.hotkey,
-                receiver_ss58=metagraph.hotkeys[uid], body=body, timeout_s=timeout_s,
-            )
-        if reply is not None and reply.proof_script:
-            out[uid] = reply
-
-    async with asyncio.TaskGroup() as tg:
-        for uid in range(metagraph.n):
-            tg.create_task(_one(uid))
-    return out
-
-
-def _verify_proof(settings: LemmaSettings, problem: Problem, proof_script: str) -> VerifyResult:
-    try:
-        return run_lean_verify(
-            settings,
-            verify_timeout_s=settings.lean_verify_timeout_s,
-            problem=problem,
-            proof_script=proof_script,
-        )
-    except Exception as e:  # noqa: BLE001
-        return VerifyResult(passed=False, reason="docker_error", stderr_tail=str(e)[:8000])
-
-
-def _build_streams(settings: LemmaSettings) -> dict[str, Source]:
-    streams: dict[str, Source] = {
-        "P": PerturbedMathlibSource(
-            lean_toolchain=DEFAULT_LEAN_TOOLCHAIN,
-            mathlib_rev=DEFAULT_MATHLIB_REV,
-        ),
-    }
-    if settings.lemma_mathlib_root_path is not None:
-        streams["M"] = MathlibSorrysSource(
-            settings.lemma_mathlib_root_path,
-            lean_toolchain=DEFAULT_LEAN_TOOLCHAIN,
-            mathlib_rev=DEFAULT_MATHLIB_REV,
-        )
-    if settings.lemma_competition_formal_path is not None:
-        streams["C"] = CompetitionFormalSource(
-            settings.lemma_competition_formal_path,
-            lean_toolchain=DEFAULT_LEAN_TOOLCHAIN,
-            mathlib_rev=DEFAULT_MATHLIB_REV,
-        )
-    return streams
-
-
-def _supply_pipeline_problems(
-    settings: LemmaSettings,
-    *,
-    epoch_id: int,
-    target_count: int,
-    subtensor: object,
-    wallet: object,
-) -> tuple[list[Problem], int]:
-    """Build per-epoch batch and chain-anchor the Merkle root; return the anchored block."""
-    batch = build_batch(
-        settings,
-        _build_streams(settings),
-        epoch_id=epoch_id,
-        target_count=target_count,
-        freshness_path=settings.lemma_supply_freshness_path,
-        skip_baseline_filter=True,
-    )
-    stamp = anchor_batch(
-        subtensor,
-        wallet=wallet,
-        netuid=settings.netuid,
-        epoch_id=epoch_id,
-        merkle_root_hex=batch.commitment.root_hex,
-    )
-    return batch.problems, stamp.block
-
-
-def _verified_solves(
-    settings: LemmaSettings,
-    problems: dict[str, Problem],
-    replies_by_theorem: dict[str, dict[int, RevealPayload]],
-) -> tuple[dict[str, set[int]], dict[str, dict[int, str]]]:
-    solved: dict[str, set[int]] = {tid: set() for tid in problems}
-    proofs: dict[str, dict[int, str]] = {tid: {} for tid in problems}
-    seen_fingerprints: dict[str, set[str]] = {tid: set() for tid in problems}
-    for tid, replies in replies_by_theorem.items():
-        problem = problems[tid]
-        for uid, reply in replies.items():
-            fp = submission_fingerprint(problem.challenge_source(), reply.proof_script)
-            if fp in seen_fingerprints[tid]:
-                continue
-            vr = _verify_proof(settings, problem, reply.proof_script)
-            if _verify_result_is_infra_failure(vr):
-                continue
-            if not vr.passed:
-                continue
-            seen_fingerprints[tid].add(fp)
-            solved[tid].add(uid)
-            proofs[tid][uid] = reply.proof_script
-    return solved, proofs
-
-
 def _compose_weights(
     solved_by_theorem: dict[str, set[int]],
+    *,
     active_uids: set[int],
     registration_block: dict[int, int],
-    commit_block: int,
+    default_commit_block: int,
     commit_block_by_uid: dict[int, int],
     reign_by_uid: dict[int, int],
 ) -> dict[int, float]:
     fractions = solve_fractions(solved_by_theorem, active_uids)
     solves = [
-        Solve(miner_uid=uid, theorem_id=tid, commit_block=commit_block_by_uid.get(uid, commit_block))
-        for tid, uids in solved_by_theorem.items()
-        for uid in uids
+        Solve(uid, tid, commit_block_by_uid.get(uid, default_commit_block))
+        for tid, uids in solved_by_theorem.items() for uid in uids
     ]
     ranks = rank_solvers(solves, registration_block)
     rewards: dict[int, dict[str, float]] = {}
@@ -242,21 +66,11 @@ def _compose_weights(
             continue
         for uid in uids:
             rank = ranks.get((tid, uid), _MAX_RANK_PAID)
-            if rank >= _MAX_RANK_PAID:
-                continue
-            rewards.setdefault(uid, {})[tid] = r0 * (_RANK_DECAY**rank)
+            if rank < _MAX_RANK_PAID:
+                rewards.setdefault(uid, {})[tid] = r0 * (_RANK_DECAY ** rank)
     if not rewards:
         return {}
-    layers = pareto_layers(rewards)
-    weights = layer_weights(layers)
-    return apply_decay(weights, reign_by_uid)
-
-
-def _update_reigns(reign_by_uid: dict[int, int], champions: list[int]) -> dict[int, int]:
-    fresh: dict[int, int] = {}
-    for uid in champions:
-        fresh[uid] = int(reign_by_uid.get(uid, 0)) + 1
-    return fresh
+    return apply_decay(layer_weights(pareto_layers(rewards)), reign_by_uid)
 
 
 async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[int, float]:
@@ -265,114 +79,81 @@ async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[i
     subtensor = get_subtensor(settings)
     metagraph = subtensor.metagraph(settings.netuid)
     cur_block = int(subtensor.get_current_block())
-    seed_head = effective_chain_head_for_problem_seed(
-        cur_block, int(settings.lemma_problem_seed_chain_head_slack_blocks or 0),
-    )
-    problem_seed, _seed_tag = resolve_problem_seed(
-        chain_head_block=seed_head,
-        netuid=settings.netuid,
-        mode=settings.problem_seed_mode,
-        quantize_blocks=settings.problem_seed_quantize_blocks,
-        subtensor=subtensor,
+    problem_seed, _tag = resolve_problem_seed(
+        chain_head_block=effective_chain_head_for_problem_seed(
+            cur_block, int(settings.lemma_problem_seed_chain_head_slack_blocks or 0),
+        ),
+        netuid=settings.netuid, mode=settings.problem_seed_mode,
+        quantize_blocks=settings.problem_seed_quantize_blocks, subtensor=subtensor,
     )
     k = max(1, int(settings.lemma_epoch_problem_count))
-    problems_list, anchored_block = _supply_pipeline_problems(
-        settings,
-        epoch_id=problem_seed,
-        target_count=k,
-        subtensor=subtensor,
-        wallet=wallet,
+    problems_list, anchored_block = build_problems_for_epoch(
+        settings, epoch_id=problem_seed, target_count=k, subtensor=subtensor, wallet=wallet,
     )
-    if not problems_list:
-        if settings.lemma_supply_fallback_generated:
-            from lemma.problems.generated import FallbackGeneratedSource
+    if not problems_list and settings.lemma_supply_fallback_generated:
+        from lemma.problems.generated import FallbackGeneratedSource
 
-            problems_list = FallbackGeneratedSource().draw(
-                problem_seed, k, str(problem_seed).encode("utf-8"),
-            )
-            anchored_block = cur_block
-        if not problems_list:
-            logger.warning("supply pipeline returned no problems epoch={}", problem_seed)
-            return {}
+        problems_list = FallbackGeneratedSource().draw(problem_seed, k, str(problem_seed).encode("utf-8"))
+        anchored_block = cur_block
+    if not problems_list:
+        logger.warning("supply pipeline returned no problems epoch={}", problem_seed)
+        return {}
     commit_block = anchored_block or cur_block
     problems = {p.id: p for p in problems_list}
 
-    replies_by_theorem: dict[str, dict[int, RevealPayload]] = {}
+    replies_by_theorem: dict[str, dict] = {}
     async with httpx.AsyncClient() as client:
         for problem in problems_list:
-            challenge = ChallengePayload(
-                theorem_id=problem.id,
-                theorem_statement=problem.challenge_source(),
-                imports=list(problem.imports),
-                lean_toolchain=problem.lean_toolchain,
-                mathlib_rev=problem.mathlib_rev,
-                deadline_block=commit_block + 1,
-                metronome_id=str(problem_seed),
-            )
-            replies_by_theorem[problem.id] = await _broadcast_theorem(
-                client=client,
-                settings=settings,
-                wallet=wallet,
-                metagraph=metagraph,
-                challenge=challenge,
+            replies_by_theorem[problem.id] = await broadcast_challenge(
+                client=client, metagraph=metagraph, keypair=wallet.hotkey,
+                challenge=ChallengePayload(
+                    theorem_id=problem.id, theorem_statement=problem.challenge_source(),
+                    imports=list(problem.imports), lean_toolchain=problem.lean_toolchain,
+                    mathlib_rev=problem.mathlib_rev, deadline_block=commit_block + 1,
+                    metronome_id=str(problem_seed),
+                ),
                 timeout_s=float(settings.forward_wait_max_s),
+                concurrency=settings.lemma_lean_verify_max_concurrent * 2,
             )
 
-    solved, proofs = _verified_solves(settings, problems, replies_by_theorem)
-
-    uid_by_hotkey = {metagraph.hotkeys[u]: u for u in range(metagraph.n)}
+    solved, proofs = verified_solves(settings, problems, replies_by_theorem)
     chain_commits = fetch_commits(
-        subtensor, netuid=settings.netuid, epoch_id=problem_seed, uid_by_hotkey=uid_by_hotkey,
+        subtensor, netuid=settings.netuid, epoch_id=problem_seed,
+        uid_by_hotkey={metagraph.hotkeys[u]: u for u in range(metagraph.n)},
     )
-    commit_block_by_uid = {c.miner_uid: c.commit_block for c in chain_commits}
-
     rep_store = load_reputation(settings.lemma_reputation_state_path)
     weights = _compose_weights(
-        solved_by_theorem=solved,
-        active_uids=set(range(metagraph.n)),
+        solved, active_uids=set(range(metagraph.n)),
         registration_block=_registration_blocks(metagraph),
-        commit_block=commit_block,
-        commit_block_by_uid=commit_block_by_uid,
+        default_commit_block=commit_block,
+        commit_block_by_uid={c.miner_uid: c.commit_block for c in chain_commits},
         reign_by_uid=rep_store.reign_by_uid,
     )
-    champions = [uid for uid, w in weights.items() if w > 0.0]
-    rep_store.reign_by_uid = _update_reigns(rep_store.reign_by_uid, champions)
+    rep_store.reign_by_uid = {
+        uid: int(rep_store.reign_by_uid.get(uid, 0)) + 1 for uid, w in weights.items() if w > 0.0
+    }
     if not dry_run:
         save_reputation(settings.lemma_reputation_state_path, rep_store)
 
     full, skip = build_full_weights(metagraph.n, weights)
     if not skip and not dry_run:
         subtensor.set_weights(
-            wallet=wallet,
-            netuid=settings.netuid,
-            uids=list(range(metagraph.n)),
-            weights=full,
-            wait_for_inclusion=False,
+            wallet=wallet, netuid=settings.netuid, uids=list(range(metagraph.n)),
+            weights=full, wait_for_inclusion=False,
         )
-
     if not dry_run:
-        corpus_entries = [
+        append_corpus([
             CorpusEntry(
-                epoch_id=problem_seed,
-                theorem_id=tid,
-                theorem_statement=problems[tid].challenge_source(),
-                proof_script=proof,
-                miner_hotkey_ss58=metagraph.hotkeys[uid],
-                commit_block=commit_block,
-                mathlib_rev=problems[tid].mathlib_rev,
-                lean_toolchain=problems[tid].lean_toolchain,
+                epoch_id=problem_seed, theorem_id=tid,
+                theorem_statement=problems[tid].challenge_source(), proof_script=proof,
+                miner_hotkey_ss58=metagraph.hotkeys[uid], commit_block=commit_block,
+                mathlib_rev=problems[tid].mathlib_rev, lean_toolchain=problems[tid].lean_toolchain,
             )
-            for tid, by_uid in proofs.items()
-            for uid, proof in by_uid.items()
-        ]
-        append_corpus(corpus_entries)
-
+            for tid, by_uid in proofs.items() for uid, proof in by_uid.items()
+        ])
     logger.info(
         "epoch theorems={} solved={} weights={} skip={} elapsed={:.2f}s",
-        len(problems),
-        sum(len(v) for v in solved.values()),
-        len(weights),
-        skip,
+        len(problems), sum(len(v) for v in solved.values()), len(weights), skip,
         time.perf_counter() - t0,
     )
     return weights

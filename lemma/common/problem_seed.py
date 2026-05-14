@@ -9,9 +9,12 @@ from loguru import logger
 ProblemSeedMode = Literal["quantize", "subnet_epoch"]
 
 
+def _quantize(chain_head_block: int, q: int) -> int:
+    return (int(chain_head_block) // max(1, int(q))) * max(1, int(q))
+
+
 def first_block_of_next_seed_window(chain_head_block: int, quantize_blocks: int) -> int:
-    q = max(1, int(quantize_blocks))
-    return ((int(chain_head_block) // q) + 1) * q
+    return _quantize(chain_head_block, quantize_blocks) + max(1, int(quantize_blocks))
 
 
 def blocks_until_quantize_boundary(chain_head_block: int, quantize_blocks: int) -> int:
@@ -19,8 +22,7 @@ def blocks_until_quantize_boundary(chain_head_block: int, quantize_blocks: int) 
 
 
 def problem_sample_seed_block(chain_head_block: int, quantize_blocks: int) -> int:
-    q = max(1, int(quantize_blocks))
-    return (int(chain_head_block) // q) * q
+    return _quantize(chain_head_block, quantize_blocks)
 
 
 def mix_sub_problem_seed(base_seed: int, sub_round: int) -> int:
@@ -32,14 +34,11 @@ def effective_chain_head_for_problem_seed(chain_head_block: int, slack_blocks: i
 
 
 def subnet_epoch_index_seed(chain_head_block: int, netuid: int, tempo: int) -> int:
-    stride = max(0, int(tempo)) + 1
-    return (int(chain_head_block) + int(netuid) + 1) // stride
+    return (int(chain_head_block) + int(netuid) + 1) // (max(0, int(tempo)) + 1)
 
 
-def resolve_problem_seed(
-    *, chain_head_block: int, netuid: int, mode: ProblemSeedMode,
-    quantize_blocks: int, subtensor: object,
-) -> tuple[int, str]:
+def resolve_problem_seed(*, chain_head_block: int, netuid: int, mode: ProblemSeedMode,
+                         quantize_blocks: int, subtensor: object) -> tuple[int, str]:
     if mode == "subnet_epoch":
         tempo_fn = getattr(subtensor, "tempo", None)
         tempo = tempo_fn(netuid, block=chain_head_block) if callable(tempo_fn) else None
@@ -49,10 +48,9 @@ def resolve_problem_seed(
     return problem_sample_seed_block(chain_head_block, quantize_blocks), "quantize"
 
 
-def blocks_until_challenge_may_change(
-    *, chain_head_block: int, netuid: int, mode: ProblemSeedMode | str,
-    quantize_blocks: int, seed_tag: str, subtensor: object,
-) -> tuple[int, str]:
+def blocks_until_challenge_may_change(*, chain_head_block: int, netuid: int,
+                                       mode: ProblemSeedMode | str, quantize_blocks: int,
+                                       seed_tag: str, subtensor: object) -> tuple[int, str]:
     if (mode or "").strip().lower() == "quantize" or (seed_tag or "").strip().lower() == "quantize_fallback_no_tempo":
         return blocks_until_quantize_boundary(chain_head_block, quantize_blocks), "quantize_window"
     bu_fn = getattr(subtensor, "blocks_until_next_epoch", None)

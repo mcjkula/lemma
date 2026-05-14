@@ -1,4 +1,4 @@
-"""Per-epoch supply orchestration: streams P/M/C → filter → freshness → registry."""
+"""Per-epoch supply orchestration: build streams P/M/C → filter → freshness → registry."""
 
 from __future__ import annotations
 
@@ -7,11 +7,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from lemma.lean import DEFAULT_LEAN_TOOLCHAIN, DEFAULT_MATHLIB_REV
 from lemma.problems.base import Problem
 from lemma.supply.base import Source
 from lemma.supply.baseline_filter import is_trivial
+from lemma.supply.competition_formal import CompetitionFormalSource
 from lemma.supply.freshness import FreshnessRegistry, statement_hash
+from lemma.supply.mathlib_sorrys import MathlibSorrysSource
+from lemma.supply.perturb_mathlib import PerturbedMathlibSource
 from lemma.supply.registry import EpochCommitment, merkle_root
+from lemma.transport.chain_commit import anchor_batch
 
 if TYPE_CHECKING:
     from lemma.common.config import LemmaSettings
@@ -86,5 +91,43 @@ def build_batch(
         problems=accepted,
         commitment=EpochCommitment(epoch_id=epoch_id, root_hex=merkle_root(accepted_hashes)),
     )
+
+
+def build_streams(settings: LemmaSettings) -> dict[str, Source]:
+    streams: dict[str, Source] = {
+        "P": PerturbedMathlibSource(lean_toolchain=DEFAULT_LEAN_TOOLCHAIN, mathlib_rev=DEFAULT_MATHLIB_REV),
+    }
+    if settings.lemma_mathlib_root_path is not None:
+        streams["M"] = MathlibSorrysSource(
+            settings.lemma_mathlib_root_path,
+            lean_toolchain=DEFAULT_LEAN_TOOLCHAIN, mathlib_rev=DEFAULT_MATHLIB_REV,
+        )
+    if settings.lemma_competition_formal_path is not None:
+        streams["C"] = CompetitionFormalSource(
+            settings.lemma_competition_formal_path,
+            lean_toolchain=DEFAULT_LEAN_TOOLCHAIN, mathlib_rev=DEFAULT_MATHLIB_REV,
+        )
+    return streams
+
+
+def build_problems_for_epoch(
+    settings: LemmaSettings,
+    *,
+    epoch_id: int,
+    target_count: int,
+    subtensor: object,
+    wallet: object,
+) -> tuple[list[Problem], int]:
+    """Compose streams, run pipeline, anchor batch Merkle root; return ``(problems, anchored_block)``."""
+    batch = build_batch(
+        settings, build_streams(settings),
+        epoch_id=epoch_id, target_count=target_count,
+        freshness_path=settings.lemma_supply_freshness_path, skip_baseline_filter=True,
+    )
+    stamp = anchor_batch(
+        subtensor, wallet=wallet, netuid=settings.netuid,
+        epoch_id=epoch_id, merkle_root_hex=batch.commitment.root_hex,
+    )
+    return batch.problems, stamp.block
 
 
