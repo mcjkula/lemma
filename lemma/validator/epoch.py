@@ -30,7 +30,8 @@ from lemma.supply.base import Source
 from lemma.supply.competition_formal import CompetitionFormalSource
 from lemma.supply.mathlib_sorrys import MathlibSorrysSource
 from lemma.supply.perturb_mathlib import PerturbedMathlibSource
-from lemma.supply.pipeline import build_batch, commit_batch
+from lemma.supply.pipeline import build_batch
+from lemma.transport.chain_commit import anchor_batch
 from lemma.transport.client import signed_post
 from lemma.validator.corpus import CorpusEntry, append as append_corpus
 from lemma.validator.weights_policy import build_full_weights
@@ -179,7 +180,8 @@ def _supply_pipeline_problems(
     target_count: int,
     subtensor: object,
     wallet: object,
-) -> list[Problem]:
+) -> tuple[list[Problem], int]:
+    """Build per-epoch batch and chain-anchor the Merkle root; return the anchored block."""
     batch = build_batch(
         settings,
         _build_streams(settings),
@@ -188,8 +190,14 @@ def _supply_pipeline_problems(
         freshness_path=settings.lemma_supply_freshness_path,
         skip_baseline_filter=True,
     )
-    commit_batch(batch, subtensor, wallet=wallet, netuid=settings.netuid)
-    return batch.problems
+    stamp = anchor_batch(
+        subtensor,
+        wallet=wallet,
+        netuid=settings.netuid,
+        epoch_id=epoch_id,
+        merkle_root_hex=batch.commitment.root_hex,
+    )
+    return batch.problems, stamp.block
 
 
 def _verified_solves(
@@ -272,7 +280,7 @@ async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[i
         subtensor=subtensor,
     )
     k = max(1, int(settings.lemma_epoch_problem_count))
-    problems_list = _supply_pipeline_problems(
+    problems_list, anchored_block = _supply_pipeline_problems(
         settings,
         epoch_id=problem_seed,
         target_count=k,
@@ -282,6 +290,7 @@ async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[i
     if not problems_list:
         logger.warning("supply pipeline returned no problems epoch={}", problem_seed)
         return {}
+    commit_block = anchored_block or cur_block
     problems = {p.id: p for p in problems_list}
 
     replies_by_theorem: dict[str, dict[int, RevealPayload]] = {}
@@ -293,7 +302,7 @@ async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[i
                 imports=list(problem.imports),
                 lean_toolchain=problem.lean_toolchain,
                 mathlib_rev=problem.mathlib_rev,
-                deadline_block=cur_block + 1,
+                deadline_block=commit_block + 1,
                 metronome_id=str(problem_seed),
             )
             replies_by_theorem[problem.id] = await _broadcast_theorem(
@@ -312,7 +321,7 @@ async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[i
         solved_by_theorem=solved,
         active_uids=set(range(metagraph.n)),
         registration_block=_registration_blocks(metagraph),
-        commit_block=cur_block,
+        commit_block=commit_block,
         reign_by_uid=rep_store.reign_by_uid,
     )
     champions = [uid for uid, w in weights.items() if w > 0.0]
@@ -338,7 +347,7 @@ async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[i
                 theorem_statement=problems[tid].challenge_source(),
                 proof_script=proof,
                 miner_hotkey_ss58=metagraph.hotkeys[uid],
-                commit_block=cur_block,
+                commit_block=commit_block,
                 mathlib_rev=problems[tid].mathlib_rev,
                 lean_toolchain=problems[tid].lean_toolchain,
             )
