@@ -30,13 +30,14 @@ def resolve_burn_uid(
     so the lookup never fails in steady state. Returns ``None`` only if the RPC
     itself fails.
     """
-    get_info = getattr(subtensor, "get_subnet_info", None)
-    if not callable(get_info):
+    get_owner = getattr(subtensor, "get_subnet_owner_hotkey", None)
+    if not callable(get_owner):
         return None
     try:
-        info = get_info(settings.netuid)
+        ss58 = get_owner(settings.netuid)
     except Exception as e:  # noqa: BLE001
-        logger.warning("subnet_info lookup failed for burn UID: {}", e)
+        logger.warning("get_subnet_owner_hotkey failed for burn UID: {}", e)
         return None
-    ss58 = (getattr(info, "owner_hotkey", "") or "").strip()
+    if not ss58:
+        return None
     return list(metagraph.hotkeys).index(ss58)
