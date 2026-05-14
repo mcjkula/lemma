@@ -129,6 +129,13 @@ class LemmaSettings(BaseSettings):
         default=500_000, ge=1024, validation_alias="LEMMA_INBOUND_MAX_CHARS",
     )
 
+    # Burn hotkey: the unearned share of each epoch's budget routes here. Empty →
+    # resolve from chain (`subtensor.get_subnet_info(netuid).owner_hotkey`). The
+    # hotkey must be registered as a UID on the subnet for routing to take effect.
+    lemma_burn_hotkey_ss58: str | None = Field(
+        default=None, validation_alias="LEMMA_BURN_HOTKEY_SS58",
+    )
+
     # §7.2 rollback flags. Old branches (`synapse`, `rolling`) were physically deleted
     # one generation ago; setting them now fails fast rather than silently falling back.
     lemma_transport: Literal["http", "synapse"] = Field(
