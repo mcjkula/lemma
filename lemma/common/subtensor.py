@@ -23,11 +23,12 @@ def resolve_burn_uid(
     subtensor: object,
     metagraph: object,
 ) -> int | None:
-    """Return the subnet owner's UID — Bittensor's primitive for emission back to the owner.
+    """Return the subnet owner's UID — Bittensor's primitive for emission to the owner.
 
-    Reads ``owner_hotkey`` from chain each epoch and finds the matching UID on the
-    metagraph. Returns ``None`` only when the owner is not yet registered on the
-    subnet (expected during initial subnet bring-up).
+    The chain guarantees the owner hotkey is registered (``append_neuron`` at subnet
+    creation) and immune from replacement (``replace_neuron`` refuses to evict it),
+    so the lookup never fails in steady state. Returns ``None`` only if the RPC
+    itself fails.
     """
     get_info = getattr(subtensor, "get_subnet_info", None)
     if not callable(get_info):
@@ -38,11 +39,4 @@ def resolve_burn_uid(
         logger.warning("subnet_info lookup failed for burn UID: {}", e)
         return None
     ss58 = (getattr(info, "owner_hotkey", "") or "").strip()
-    if not ss58:
-        return None
-    hotkeys = list(getattr(metagraph, "hotkeys", []) or [])
-    try:
-        return hotkeys.index(ss58)
-    except ValueError:
-        logger.debug("subnet owner {} not yet registered on netuid {}", ss58, settings.netuid)
-        return None
+    return list(metagraph.hotkeys).index(ss58)
