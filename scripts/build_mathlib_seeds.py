@@ -8,8 +8,8 @@ Each line is one seed:
      "imports": ["Mathlib", ...],
      "params": {"<name>": {"kind": "nat|int|ident", "lo": int, "hi": int}}}
 
-``perturb_mathlib.PerturbedMathlibSource`` samples params via the drand-timelocked
-RNG at draw time and renders ``type_expr``.
+``perturb_mathlib.PerturbedMathlibSource`` samples params via a per-epoch RNG
+at draw time and renders ``type_expr``.
 """
 
 from __future__ import annotations
