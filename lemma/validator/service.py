@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import os
 
 import bittensor
 from loguru import logger
@@ -27,13 +26,6 @@ def epoch_sleep_seconds(blocks_until_epoch: int, block_time_sec_estimate: float)
     return min(12.0, max(1.0, blocks_until_epoch * block_time_sec_estimate * 0.25))
 
 
-def validator_retry_sleep_seconds(exc: BaseException, block_time_sec_estimate: float) -> float:
-    msg = str(exc).lower()
-    if "429" in msg or "rate limit" in msg or "too many requests" in msg:
-        return min(300.0, max(30.0, block_time_sec_estimate * 5.0))
-    return 2.0
-
-
 def validator_problem_window(
     settings: LemmaSettings, subtensor: bittensor.Subtensor, chain_head_block: int,
 ) -> tuple[int, int, str]:
@@ -51,24 +43,15 @@ def validator_problem_window(
     return seed, blocks, edge
 
 
-def validator_startup_issues(settings: LemmaSettings) -> list[str]:
-    if settings.lean_use_docker:
-        return []
-    return ["lemma validator requires Docker for Lean verify (LEMMA_USE_DOCKER=true)."]
-
-
 class ValidatorService:
-    def __init__(self, settings: LemmaSettings | None = None, dry_run: bool | None = None) -> None:
-        self.settings = settings or LemmaSettings()
-        self.dry_run = dry_run if dry_run is not None else os.environ.get("LEMMA_DRY_RUN") == "1"
+    def __init__(self, settings: LemmaSettings, *, dry_run: bool) -> None:
+        self.settings = settings
+        self.dry_run = dry_run
 
     async def run_forever(self) -> None:
         setup_logging(self.settings.log_level)
         logger.info("Validator running — press Ctrl+C to stop.")
         s = self.settings
-        fatal = validator_startup_issues(s)
-        if fatal:
-            raise SystemExit(fatal[0])
         subtensor = get_subtensor(s)
         last_seed: int | None = None
         while True:
@@ -84,9 +67,8 @@ class ValidatorService:
                 logger.debug("Waiting {:.0f}s (~{} blocks to {})", wait_s, blocks, edge)
                 await asyncio.sleep(wait_s)
             except Exception as e:  # noqa: BLE001
-                wait_s = validator_retry_sleep_seconds(e, s.block_time_sec_estimate)
-                logger.exception("validator loop retry in {:.0f}s: {}", wait_s, e)
-                await asyncio.sleep(wait_s)
+                logger.exception("validator loop retry in 2s: {}", e)
+                await asyncio.sleep(2)
 
     def run_blocking(self) -> None:
         import click

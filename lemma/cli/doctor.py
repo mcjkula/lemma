@@ -45,10 +45,7 @@ def run_doctor() -> int:
         return 1
 
     click.echo(stylize("\n2  Configuration (.env)", fg="cyan", bold=True))
-    click.echo(
-        stylize("   OK", fg="green")
-        + f"    NETUID={settings.netuid}  lean_use_docker={settings.lean_use_docker}",
-    )
+    click.echo(stylize("   OK", fg="green") + f"    NETUID={settings.netuid}")
     click.echo(
         stylize("   .", dim=True)
         + f"    wallet={settings.wallet_cold}/{settings.wallet_hot}",

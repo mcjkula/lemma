@@ -60,15 +60,11 @@ class LemmaSettings(BaseSettings):
     lean_verify_timeout_s: int = Field(
         default=180, ge=10, le=3600, validation_alias="LEAN_VERIFY_TIMEOUT_S",
     )
-    lean_use_docker: bool = Field(default=True, validation_alias="LEMMA_USE_DOCKER")
     lemma_lean_docker_worker: str | None = Field(
         default=None, validation_alias="LEMMA_LEAN_DOCKER_WORKER",
     )
     lemma_lean_verify_max_concurrent: int = Field(
         default=4, ge=1, le=64, validation_alias="LEMMA_LEAN_VERIFY_MAX_CONCURRENT",
-    )
-    lemma_lean_workspace_cache_enabled: bool = Field(
-        default=True, validation_alias="LEMMA_LEAN_WORKSPACE_CACHE_ENABLED",
     )
     lemma_lean_workspace_cache_max_dirs: int = Field(
         default=8, ge=0, le=1_000, validation_alias="LEMMA_LEAN_WORKSPACE_CACHE_MAX_DIRS",
@@ -103,15 +99,9 @@ class LemmaSettings(BaseSettings):
     lemma_supply_freshness_path: Path | None = Field(
         default=None, validation_alias="LEMMA_SUPPLY_FRESHNESS_PATH",
     )
-    lemma_supply_fallback_generated: bool = Field(
-        default=False, validation_alias="LEMMA_SUPPLY_FALLBACK_GENERATED",
-    )
     lemma_supply_public_corpus_bloom_path: Path | None = Field(
         default=None, validation_alias="LEMMA_SUPPLY_PUBLIC_CORPUS_BLOOM_PATH",
     )
     lemma_inbound_max_chars: int = Field(
         default=500_000, ge=1024, validation_alias="LEMMA_INBOUND_MAX_CHARS",
     )
-
-    def validator_wallet_names(self) -> tuple[str, str]:
-        return (self.wallet_cold, self.wallet_hot)

@@ -39,16 +39,10 @@ async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[i
         netuid=settings.netuid, mode=settings.problem_seed_mode,
         quantize_blocks=settings.problem_seed_quantize_blocks, subtensor=subtensor,
     )
-    k = max(1, settings.lemma_epoch_problem_count)
-    problems_list, anchored_block = build_problems_for_epoch(
-        settings, epoch_id=problem_seed, target_count=k, subtensor=subtensor, wallet=wallet,
+    problems_list, commit_block = build_problems_for_epoch(
+        settings, epoch_id=problem_seed, target_count=settings.lemma_epoch_problem_count,
+        subtensor=subtensor, wallet=wallet,
     )
-    if not problems_list and settings.lemma_supply_fallback_generated:
-        from lemma.problems.generated import FallbackGeneratedSource
-
-        problems_list = FallbackGeneratedSource().draw(problem_seed, k, str(problem_seed).encode())
-        anchored_block = cur_block
-    commit_block = anchored_block or cur_block
     problems = {p.id: p for p in problems_list}
 
     replies_by_theorem: dict[str, dict] = {}
@@ -85,8 +79,6 @@ async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[i
 
     full = build_full_weights(n, miner_weights, burn_share=burn_share, burn_uid=resolve_burn_uid(metagraph))
     if not dry_run:
-        # wait_for_inclusion=False: the commit response is returned; the reveal lands later
-        # automatically when the subnet has commit-reveal enabled.
         response = subtensor.set_weights(
             wallet=wallet, netuid=settings.netuid, uids=list(range(n)),
             weights=full, wait_for_inclusion=False,

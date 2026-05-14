@@ -15,11 +15,6 @@ class _StubSubtensor:
         self.calls.append({"wallet": wallet, "netuid": netuid, "data": data})
 
 
-def test_no_chain_path_returns_zero() -> None:
-    block = anchor_batch(None, wallet=object(), netuid=1, epoch_id=5, merkle_root_hex="ab" * 32)
-    assert block == 0
-
-
 def test_publishes_str_payload_and_returns_head_block() -> None:
     st = _StubSubtensor(head=42)
     wallet = object()

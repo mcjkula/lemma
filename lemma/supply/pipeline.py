@@ -103,7 +103,7 @@ def build_problems_for_epoch(
     *,
     epoch_id: int,
     target_count: int,
-    subtensor: bittensor.Subtensor | None,
+    subtensor: bittensor.Subtensor,
     wallet: bittensor.Wallet,
 ) -> tuple[list[Problem], int]:
     batch = build_batch(
