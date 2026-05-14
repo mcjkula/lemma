@@ -104,7 +104,22 @@ class ValidatorService:
                 await asyncio.sleep(wait_s)
 
     def run_blocking(self) -> None:
+        import click
+
+        from lemma.cli.style import finish_cli_output, stylize
+
+        click.echo(
+            stylize(
+                "Validator running — press Ctrl+C to stop and return to your shell.",
+                fg="cyan",
+                bold=True,
+            ),
+            err=True,
+        )
         try:
             asyncio.run(self.run_forever())
         except KeyboardInterrupt:
-            logger.info("Validator stopped (Ctrl+C).")
+            click.echo("")
+            click.echo(stylize("Validator stopped (Ctrl+C).", fg="yellow", bold=True), err=True)
+        finally:
+            finish_cli_output()
