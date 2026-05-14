@@ -10,7 +10,8 @@ fingerprinting handles copyists.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+
+import bittensor
 
 _KIND_BATCH = "lemma:batch"
 
@@ -22,26 +23,23 @@ class ChainStamp:
     payload: str
 
 
-def _head_block(subtensor: Any) -> int:
-    head = getattr(subtensor, "get_current_block", None)
-    if not callable(head):
-        return 0
-    try:
-        return int(head())
-    except Exception:  # noqa: BLE001
-        return 0
-
-
 def anchor_batch(
-    subtensor: Any,
+    subtensor: bittensor.Subtensor | None,
     *,
-    wallet: Any,
+    wallet: bittensor.Wallet,
     netuid: int,
     epoch_id: int,
     merkle_root_hex: str,
 ) -> ChainStamp:
+    """Publish the batch root via ``set_commitment`` and return the stamped block.
+
+    ``subtensor=None`` is the explicit no-chain path used by dry-run / fixture code.
+    The default ``set_commitment`` call waits for inclusion, so reading
+    ``get_current_block`` immediately after gives the (inclusion-or-later) block at
+    which the commitment landed.
+    """
     payload = f"{_KIND_BATCH}:{epoch_id}:{merkle_root_hex}"
-    setter = getattr(subtensor, "set_commitment", None)
-    if callable(setter):
-        setter(wallet=wallet, netuid=netuid, data=payload)
-    return ChainStamp(block=_head_block(subtensor), kind=_KIND_BATCH, payload=payload)
+    if subtensor is None:
+        return ChainStamp(block=0, kind=_KIND_BATCH, payload=payload)
+    subtensor.set_commitment(wallet=wallet, netuid=netuid, data=payload)
+    return ChainStamp(block=int(subtensor.get_current_block()), kind=_KIND_BATCH, payload=payload)
