@@ -33,9 +33,9 @@ and public verification evidence.
 
 - Working checkout: `/Users/leehall/lemma`.
 - Local branch: `main` tracking `origin/main`.
-- Latest pushed batch covered by this handoff: `28fb364` (`Expand generated
-  supply and trust docs`) after the 2026-05-14 generated-builder expansion and
-  validator-only deploy.
+- Latest runtime-impacting batch covered by this handoff: `28fb364` (`Expand
+  generated supply and trust docs`) after the 2026-05-14 generated-builder
+  expansion and validator-only deploy.
 - Latest GitHub-confirmed runtime head: `0ff1068` (`Record CI evidence for
   set_weights cleanup`), with `CI` passing on GitHub Actions run
   `25793725075`. The preceding code commit `d95411b` also had `CI` and
