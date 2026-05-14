@@ -6,12 +6,10 @@ import hashlib
 import shutil
 from pathlib import Path
 
-from lemma.lean.proof_metrics import write_proof_metrics_probe
 from lemma.problems.base import Problem
 
 
 def workspace_template_cache_key(problem: Problem) -> str:
-    """Stable id for Challenge/Solution/lakefile template (same epoch ⇒ same key)."""
     h = hashlib.sha256()
     for part in (
         problem.id,
@@ -31,13 +29,6 @@ def workspace_verify_cache_key(
     *,
     include_submission_fingerprint: bool,
 ) -> str:
-    """Disk slot id for ``LeanSandbox.verify`` — template key, optionally plus proof text.
-
-    Default (fingerprint off): one warm ``.lake`` per theorem template; ``Submission.lean`` is overwritten
-    each verify (incremental ``lake build Submission``).
-
-    With fingerprint on: distinct proof bodies use distinct cache subdirs (more isolation, less reuse).
-    """
     base = workspace_template_cache_key(problem)
     if not include_submission_fingerprint:
         return base
@@ -45,66 +36,7 @@ def workspace_verify_cache_key(
     return f"{base}_{fp}"
 
 
-def materialize_workspace(
-    dest: Path,
-    problem: Problem,
-    submission_lean: str,
-    *,
-    preserve_lake: bool = False,
-    include_proof_metrics_probe: bool = False,
-) -> None:
-    """
-    Write Challenge, Solution, Submission, lakefile, toolchain, and axiom check driver.
-
-    ``dest`` must be empty or will be created; caller typically uses a temp directory.
-    If ``preserve_lake`` is True and ``dest/.lake`` already exists, source files are
-    overwritten in place so Lake can incrementally rebuild ``Submission`` only.
-    """
-    if preserve_lake and dest.exists() and (dest / ".lake").is_dir():
-        (dest / "Challenge.lean").write_text(problem.challenge_source(), encoding="utf-8")
-        (dest / "Solution.lean").write_text(problem.solution_source(), encoding="utf-8")
-        (dest / "Submission.lean").write_text(submission_lean, encoding="utf-8")
-        (dest / "lean-toolchain").write_text(problem.lean_toolchain.strip() + "\n", encoding="utf-8")
-        lake = _lakefile_toml(problem)
-        (dest / "lakefile.toml").write_text(lake, encoding="utf-8")
-        thm = problem.theorem_name
-        axiom_check = f"""import Submission
-
-#print axioms Submission.{thm}
-"""
-        (dest / "AxiomCheck.lean").write_text(axiom_check, encoding="utf-8")
-        if include_proof_metrics_probe:
-            write_proof_metrics_probe(dest, thm)
-        return
-
-    if dest.exists():
-        shutil.rmtree(dest)
-    dest.mkdir(parents=True)
-
-    (dest / "Challenge.lean").write_text(problem.challenge_source(), encoding="utf-8")
-    (dest / "Solution.lean").write_text(problem.solution_source(), encoding="utf-8")
-    (dest / "Submission.lean").write_text(submission_lean, encoding="utf-8")
-
-    (dest / "lean-toolchain").write_text(problem.lean_toolchain.strip() + "\n", encoding="utf-8")
-
-    (dest / "lakefile.toml").write_text(_lakefile_toml(problem), encoding="utf-8")
-
-    thm = problem.theorem_name
-    # Check axioms on the miner's theorem in ``Submission`` (not ``Solution``): the
-    # Solution module only bridges Challenge ↔ Submission and may not expose names
-    # the way ``lake env lean`` expects for every workspace layout.
-    axiom_check = f"""import Submission
-
-#print axioms Submission.{thm}
-"""
-    (dest / "AxiomCheck.lean").write_text(axiom_check, encoding="utf-8")
-    if include_proof_metrics_probe:
-        write_proof_metrics_probe(dest, thm)
-
-
 def _lakefile_toml(problem: Problem) -> str:
-    # Must match `name` in `lemma/lean/template/lakefile.toml` (Lean sandbox image bakes `/opt/lemma-stub/.lake`
-    # under that project name so `cp` in the container can warm this workspace).
     return f'''name = "lemma_stub"
 version = "0.1.0"
 defaultTargets = ["Challenge", "Solution", "Submission"]
@@ -126,3 +58,28 @@ name = "Solution"
 [[lean_lib]]
 name = "Submission"
 '''
+
+
+def materialize_workspace(
+    dest: Path,
+    problem: Problem,
+    submission_lean: str,
+    *,
+    preserve_lake: bool = False,
+) -> None:
+    if preserve_lake and dest.exists() and (dest / ".lake").is_dir():
+        pass
+    else:
+        if dest.exists():
+            shutil.rmtree(dest)
+        dest.mkdir(parents=True)
+
+    (dest / "Challenge.lean").write_text(problem.challenge_source(), encoding="utf-8")
+    (dest / "Solution.lean").write_text(problem.solution_source(), encoding="utf-8")
+    (dest / "Submission.lean").write_text(submission_lean, encoding="utf-8")
+    (dest / "lean-toolchain").write_text(problem.lean_toolchain.strip() + "\n", encoding="utf-8")
+    (dest / "lakefile.toml").write_text(_lakefile_toml(problem), encoding="utf-8")
+    (dest / "AxiomCheck.lean").write_text(
+        f"import Submission\n\n#print axioms Submission.{problem.theorem_name}\n",
+        encoding="utf-8",
+    )
