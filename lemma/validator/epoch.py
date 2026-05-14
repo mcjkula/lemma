@@ -288,8 +288,16 @@ async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[i
         wallet=wallet,
     )
     if not problems_list:
-        logger.warning("supply pipeline returned no problems epoch={}", problem_seed)
-        return {}
+        if settings.lemma_supply_fallback_generated:
+            from lemma.problems.generated import FallbackGeneratedSource
+
+            problems_list = FallbackGeneratedSource().draw(
+                problem_seed, k, str(problem_seed).encode("utf-8"),
+            )
+            anchored_block = cur_block
+        if not problems_list:
+            logger.warning("supply pipeline returned no problems epoch={}", problem_seed)
+            return {}
     commit_block = anchored_block or cur_block
     problems = {p.id: p for p in problems_list}
 
