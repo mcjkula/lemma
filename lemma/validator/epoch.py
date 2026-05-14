@@ -99,10 +99,12 @@ async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[i
         metagraph.n, miner_weights, burn_share=burn_share, burn_uid=burn_uid,
     )
     if not skip and not dry_run:
-        subtensor.set_weights(
+        response = subtensor.set_weights(
             wallet=wallet, netuid=settings.netuid, uids=list(range(metagraph.n)),
             weights=full, wait_for_inclusion=False,
         )
+        if not getattr(response, "success", True):
+            logger.warning("set_weights returned failure: {}", getattr(response, "message", ""))
     if not dry_run:
         append_corpus([
             CorpusEntry(
