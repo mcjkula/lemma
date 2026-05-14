@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
 
+import bittensor
 import httpx
 from bittensor_wallet import Keypair
 from loguru import logger
@@ -30,13 +30,13 @@ async def signed_post(
     return await client.post(url, content=body, headers=headers, timeout=timeout_s)
 
 
-def miner_url(metagraph: Any, uid: int) -> str | None:
+def miner_url(metagraph: bittensor.Metagraph, uid: int) -> str | None:
     try:
         ax = metagraph.axons[uid]
-    except (IndexError, AttributeError):
+    except IndexError:
         return None
-    ip = (getattr(ax, "ip", "") or "").strip()
-    port = int(getattr(ax, "port", 0) or 0)
+    ip = (ax.ip or "").strip()
+    port = int(ax.port or 0)
     if not ip or ip == "0.0.0.0" or port <= 0:
         return None
     return f"http://{ip}:{port}"
@@ -65,7 +65,7 @@ async def _query_one(
 async def broadcast_challenge(
     *,
     client: httpx.AsyncClient,
-    metagraph: Any,
+    metagraph: bittensor.Metagraph,
     keypair: Keypair,
     challenge: ChallengePayload,
     timeout_s: float,
@@ -87,6 +87,6 @@ async def broadcast_challenge(
             out[uid] = reply
 
     async with asyncio.TaskGroup() as tg:
-        for uid in range(metagraph.n):
+        for uid in range(int(metagraph.n)):
             tg.create_task(_one(uid))
     return out
