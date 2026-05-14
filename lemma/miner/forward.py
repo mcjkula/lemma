@@ -1,4 +1,4 @@
-"""Miner request handlers: invoke the operator solver and return the commit/reveal."""
+"""Miner request handlers: invoke the operator solver, return commit/reveal."""
 
 from __future__ import annotations
 
@@ -16,35 +16,21 @@ async def _empty_solver(_: ChallengePayload) -> str:
 
 
 def _commitment_hex(proof_script: str, nonce_hex: str) -> str:
-    h = hashlib.sha256()
-    h.update(proof_script.encode("utf-8"))
-    h.update(b"\x1e")
-    h.update(nonce_hex.encode("utf-8"))
-    return h.hexdigest()
+    return hashlib.sha256(proof_script.encode("utf-8") + b"\x1e" + nonce_hex.encode("utf-8")).hexdigest()
 
 
-async def handle_commit(
-    payload: ChallengePayload,
-    *,
-    solver: Solver | None = None,
-) -> CommitPayload:
+async def handle_commit(payload: ChallengePayload, *, solver: Solver | None = None) -> CommitPayload:
     proof = await (solver or _empty_solver)(payload)
-    commit_hex = _commitment_hex(proof, secrets.token_hex(16))
     return CommitPayload(
         theorem_id=payload.theorem_id,
         metronome_id=payload.metronome_id,
-        proof_commitment_hex=commit_hex,
+        proof_commitment_hex=_commitment_hex(proof, secrets.token_hex(16)),
     )
 
 
-async def handle_reveal(
-    payload: ChallengePayload,
-    *,
-    solver: Solver | None = None,
-) -> RevealPayload:
-    proof = await (solver or _empty_solver)(payload)
+async def handle_reveal(payload: ChallengePayload, *, solver: Solver | None = None) -> RevealPayload:
     return RevealPayload(
         theorem_id=payload.theorem_id,
         metronome_id=payload.metronome_id,
-        proof_script=proof,
+        proof_script=await (solver or _empty_solver)(payload),
     )

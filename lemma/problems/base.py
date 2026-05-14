@@ -5,8 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-# `Solution.lean` bridges `Challenge` ↔ `Submission` via `exact Submission.<theorem_name>`.
-# The bridge theorem must use a different name, otherwise Lean reports a duplicate declaration.
+# Solution.lean bridges Challenge ↔ Submission via `exact Submission.<theorem_name>`.
+# Different name than `theorem_name` to avoid Lean's duplicate-declaration error.
 SOLUTION_BRIDGE_THEOREM = "LemmaSubmissionBridge"
 
 

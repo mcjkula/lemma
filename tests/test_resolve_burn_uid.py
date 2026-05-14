@@ -39,5 +39,5 @@ def test_raises_when_owner_not_in_hotkeys() -> None:
     # Metagraph snapshot lag: owner_hotkey populated from get_metagraph_info but
     # axons list is one sync behind. Chain invariant violation in steady state.
     m = _Meta(hotkeys=["a", "b"], owner_hotkey="c")
-    with pytest.raises(BurnUidUnavailable, match="not registered"):
+    with pytest.raises(BurnUidUnavailable, match="not in metagraph.hotkeys"):
         resolve_burn_uid(m)

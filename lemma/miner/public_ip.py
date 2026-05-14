@@ -1,24 +1,19 @@
-"""Optional public IPv4 discovery for miner axon advertisement.
-
-Does not configure firewalls or routers — only fills in the address to advertise.
-"""
+"""Optional public IPv4 discovery for the miner axon advertisement."""
 
 from __future__ import annotations
 
 import ipaddress
-from typing import Final
 
 import httpx
 from loguru import logger
 
-_IP_SOURCES: Final[tuple[tuple[str, dict[str, str] | None], ...]] = (
+_IP_SOURCES = (
     ("https://api.ipify.org", {"format": "text"}),
     ("https://icanhazip.com", None),
 )
 
 
 def discover_public_ipv4(timeout_s: float = 5.0) -> str | None:
-    """Return this host's public IPv4 if reachable discovery services agree, else ``None``."""
     for url, params in _IP_SOURCES:
         try:
             r = httpx.get(url, params=params or {}, timeout=timeout_s)
@@ -28,5 +23,4 @@ def discover_public_ipv4(timeout_s: float = 5.0) -> str | None:
             return text
         except Exception as e:  # noqa: BLE001
             logger.debug("public IPv4 discovery failed via {}: {}", url, e)
-            continue
     return None

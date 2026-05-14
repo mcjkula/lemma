@@ -14,24 +14,17 @@ def _load(path: Path) -> list[dict[str, object]]:
     if not path.is_file():
         return []
     rows: list[dict[str, object]] = []
-    with path.open("r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                row = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if isinstance(row, dict):
-                rows.append(row)
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(row, dict):
+            rows.append(row)
     return rows
-
-
-def _problem_id(row: dict[str, object]) -> str:
-    raw = json.dumps(row, sort_keys=True).encode()
-    digest = hashlib.sha256(raw).hexdigest()[:16]
-    return f"competition/{digest}"
 
 
 class CompetitionFormalSource:
@@ -53,30 +46,23 @@ class CompetitionFormalSource:
         if not rows:
             return []
         rng = random.Random(hashlib.sha256(rng_seed + str(epoch_id).encode()).digest())
-        n = min(count, len(rows))
-        chosen = rng.sample(rows, n)
+        chosen = rng.sample(rows, min(count, len(rows)))
         out: list[Problem] = []
         for row in chosen:
             type_expr = str(row.get("type_expr", "")).strip()
             theorem_name = str(row.get("theorem_name", "")).strip()
             if not type_expr or not theorem_name:
                 continue
-            split = str(row.get("split", "hard")).strip() or "hard"
-            imports_raw = row.get("imports")
-            imports = tuple(imports_raw) if isinstance(imports_raw, list) else ("Mathlib",)
-            out.append(
-                Problem(
-                    id=_problem_id(row),
-                    theorem_name=theorem_name,
-                    type_expr=type_expr,
-                    split=split,
-                    lean_toolchain=self._toolchain,
-                    mathlib_rev=self._rev,
-                    imports=imports,
-                    extra={
-                        "source": "competition_formal",
-                        "origin": str(row.get("origin") or ""),
-                    },
-                ),
-            )
+            imports = row.get("imports")
+            digest = hashlib.sha256(json.dumps(row, sort_keys=True).encode()).hexdigest()[:16]
+            out.append(Problem(
+                id=f"competition/{digest}",
+                theorem_name=theorem_name,
+                type_expr=type_expr,
+                split=str(row.get("split", "hard")).strip() or "hard",
+                lean_toolchain=self._toolchain,
+                mathlib_rev=self._rev,
+                imports=tuple(imports) if isinstance(imports, list) else ("Mathlib",),
+                extra={"source": "competition_formal", "origin": str(row.get("origin") or "")},
+            ))
         return out

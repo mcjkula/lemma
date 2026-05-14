@@ -37,10 +37,10 @@ def _load_seeds(path: str) -> tuple[_Seed, ...]:
             continue
         row = json.loads(line)
         out.append(_Seed(
-            id=str(row["id"]),
-            family=str(row["family"]),
-            split=str(row.get("split", "easy")),
-            type_expr=str(row["type_expr"]),
+            id=row["id"],
+            family=row["family"],
+            split=row.get("split", "easy"),
+            type_expr=row["type_expr"],
             imports=tuple(row.get("imports", ("Mathlib",))),
             params=dict(row.get("params", {})),
         ))
@@ -50,21 +50,12 @@ def _load_seeds(path: str) -> tuple[_Seed, ...]:
 def _draw_param(rng: random.Random, spec: dict[str, Any]) -> str:
     kind = spec.get("kind")
     if kind == "ident":
-        pool = spec.get("pool") or ["x"]
-        return str(rng.choice(pool))
-    lo, hi = int(spec.get("lo", 2)), int(spec.get("hi", 97))
-    if kind == "int":
-        return str(rng.randint(lo, hi))
-    return str(rng.randint(lo, hi))
+        return rng.choice(spec.get("pool") or ["x"])
+    return str(rng.randint(int(spec.get("lo", 2)), int(spec.get("hi", 97))))
 
 
 def _render(seed: _Seed, rng: random.Random) -> str:
     return seed.type_expr.format(**{name: _draw_param(rng, spec) for name, spec in seed.params.items()})
-
-
-def _theorem_name(seed: _Seed, epoch_id: int, idx: int) -> str:
-    digest = hashlib.sha256(f"{seed.id}/{epoch_id}/{idx}".encode()).hexdigest()[:12]
-    return f"perturb_{seed.family}_{digest}"
 
 
 class PerturbedMathlibSource:
@@ -81,13 +72,13 @@ class PerturbedMathlibSource:
             return []
         rng = random.Random(hashlib.sha256(rng_seed + str(epoch_id).encode()).digest())
         out: list[Problem] = []
-        for i in range(max(0, int(count))):
+        for i in range(max(0, count)):
             seed = rng.choice(seeds)
-            type_expr = _render(seed, rng)
+            digest = hashlib.sha256(f"{seed.id}/{epoch_id}/{i}".encode()).hexdigest()[:12]
             out.append(Problem(
                 id=f"perturb/{epoch_id}/{i}",
-                theorem_name=_theorem_name(seed, epoch_id, i),
-                type_expr=type_expr,
+                theorem_name=f"perturb_{seed.family}_{digest}",
+                type_expr=_render(seed, rng),
                 split=seed.split,
                 lean_toolchain=self._toolchain,
                 mathlib_rev=self._rev,

@@ -31,6 +31,7 @@ def _problem(name: str, type_expr: str) -> Problem:
 @dataclass
 class _Settings:
     lean_verify_timeout_s: int = 30
+    lemma_supply_public_corpus_bloom_path: Path | None = None
 
 
 def test_pipeline_picks_from_streams(tmp_path: Path) -> None:

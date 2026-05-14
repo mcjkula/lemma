@@ -1,8 +1,9 @@
-"""Open `sorry` declarations crawled from a local Mathlib checkout."""
+"""Open ``sorry`` declarations crawled from a local Mathlib checkout."""
 
 from __future__ import annotations
 
 import hashlib
+import random
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,30 +30,16 @@ def _scan_file(path: Path) -> list[_SorryHit]:
         return []
     out: list[_SorryHit] = []
     for match in _SORRY_RX.finditer(text):
-        name = match.group(2).strip()
         type_expr = re.sub(r"\s+", " ", match.group(4)).strip()
-        if not type_expr:
-            continue
-        out.append(_SorryHit(file_path=path, theorem_name=name, type_expr=type_expr))
+        if type_expr:
+            out.append(_SorryHit(file_path=path, theorem_name=match.group(2).strip(), type_expr=type_expr))
     return out
 
 
 def _crawl(root: Path) -> list[_SorryHit]:
     if not root.is_dir():
         return []
-    hits: list[_SorryHit] = []
-    for path in sorted(root.rglob("*.lean")):
-        hits.extend(_scan_file(path))
-    return hits
-
-
-def _problem_id(hit: _SorryHit, root: Path) -> str:
-    try:
-        rel = hit.file_path.relative_to(root)
-    except ValueError:
-        rel = hit.file_path
-    digest = hashlib.sha256(f"{rel}/{hit.theorem_name}".encode()).hexdigest()[:16]
-    return f"sorry/{digest}"
+    return [hit for path in sorted(root.rglob("*.lean")) for hit in _scan_file(path)]
 
 
 class MathlibSorrysSource:
@@ -62,37 +49,33 @@ class MathlibSorrysSource:
         self._root = root
         self._toolchain = lean_toolchain
         self._rev = mathlib_rev
-        self._hits: list[_SorryHit] = []
-        self._scanned = False
+        self._hits: list[_SorryHit] | None = None
 
-    def _ensure_scan(self) -> None:
-        if self._scanned:
-            return
-        self._hits = _crawl(self._root)
-        self._scanned = True
+    def _ensure(self) -> list[_SorryHit]:
+        if self._hits is None:
+            self._hits = _crawl(self._root)
+        return self._hits
 
     def draw(self, epoch_id: int, count: int, rng_seed: bytes) -> list[Problem]:
-        self._ensure_scan()
-        if not self._hits:
+        hits = self._ensure()
+        if not hits:
             return []
-        import random
-
         rng = random.Random(hashlib.sha256(rng_seed + str(epoch_id).encode()).digest())
-        n = min(count, len(self._hits))
-        chosen = rng.sample(self._hits, n)
-        return [
-            Problem(
-                id=_problem_id(hit, self._root),
+        chosen = rng.sample(hits, min(count, len(hits)))
+        out: list[Problem] = []
+        for hit in chosen:
+            try:
+                rel = hit.file_path.relative_to(self._root)
+            except ValueError:
+                rel = hit.file_path
+            digest = hashlib.sha256(f"{rel}/{hit.theorem_name}".encode()).hexdigest()[:16]
+            out.append(Problem(
+                id=f"sorry/{digest}",
                 theorem_name=hit.theorem_name,
                 type_expr=hit.type_expr,
                 split="hard",
                 lean_toolchain=self._toolchain,
                 mathlib_rev=self._rev,
-                imports=("Mathlib",),
-                extra={
-                    "source": "mathlib_sorrys",
-                    "mathlib_file": str(hit.file_path.relative_to(self._root)),
-                },
-            )
-            for hit in chosen
-        ]
+                extra={"source": "mathlib_sorrys", "mathlib_file": str(rel)},
+            ))
+        return out

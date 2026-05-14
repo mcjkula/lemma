@@ -1,8 +1,6 @@
-"""Last-resort degraded-fallback theorem generator.
+"""Kill-switch theorem generator used when Streams P/M/C collapse.
 
-Used only when Streams P/M/C collapse (every candidate baseline-rejected or
-freshness-blocked) and ``LEMMA_SUPPLY_FALLBACK_GENERATED=true``. Emits a loud
-warning on every draw — this is *not* an intended production source.
+Only emitted when ``LEMMA_SUPPLY_FALLBACK_GENERATED=true``. Loud warning per draw.
 """
 
 from __future__ import annotations
@@ -29,7 +27,6 @@ def _draw_one(rng: random.Random, epoch_id: int, idx: int) -> Problem:
         split="easy",
         lean_toolchain=DEFAULT_LEAN_TOOLCHAIN,
         mathlib_rev=DEFAULT_MATHLIB_REV,
-        imports=("Mathlib",),
         extra={"source": "fallback_generated"},
     )
 
@@ -38,9 +35,6 @@ class FallbackGeneratedSource:
     name = "fallback_generated"
 
     def draw(self, epoch_id: int, count: int, rng_seed: bytes) -> list[Problem]:
-        logger.warning(
-            "LEMMA_SUPPLY_FALLBACK_GENERATED active — emitting degraded fallback theorems "
-            "(this is a kill-switch, not a production source).",
-        )
+        logger.warning("LEMMA_SUPPLY_FALLBACK_GENERATED active — emitting degraded fallback theorems.")
         rng = random.Random(hashlib.sha256(rng_seed + str(epoch_id).encode()).digest())
-        return [_draw_one(rng, epoch_id, i) for i in range(max(0, int(count)))]
+        return [_draw_one(rng, epoch_id, i) for i in range(max(0, count))]

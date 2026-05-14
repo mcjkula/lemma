@@ -1,4 +1,4 @@
-"""Per-epoch supply orchestration: build streams P/M/C → filter → freshness → registry."""
+"""Per-epoch supply: streams P/M/C → filter → freshness → chain anchor."""
 
 from __future__ import annotations
 
@@ -34,29 +34,18 @@ class SupplyBatch:
     commitment: EpochCommitment
 
 
-def _per_stream_count(total: int, ratio: float) -> int:
-    return max(0, int(round(total * ratio)))
-
-
-def _seed_bytes(epoch_id: int, stream: str) -> bytes:
-    return hashlib.sha256(f"{epoch_id}:{stream}".encode()).digest()
-
-
 def _draw_from_streams(
-    streams: dict[str, Source],
-    epoch_id: int,
-    count: int,
+    streams: dict[str, Source], epoch_id: int, count: int,
     ratios: tuple[tuple[str, float], ...],
 ) -> list[Problem]:
     out: list[Problem] = []
     for key, ratio in ratios:
         source = streams.get(key)
-        if source is None:
+        n = max(0, round(count * ratio))
+        if source is None or n <= 0:
             continue
-        n = _per_stream_count(count, ratio)
-        if n <= 0:
-            continue
-        out.extend(source.draw(epoch_id, n, _seed_bytes(epoch_id, key)))
+        seed = hashlib.sha256(f"{epoch_id}:{key}".encode()).digest()
+        out.extend(source.draw(epoch_id, n, seed))
     return out
 
 
@@ -71,12 +60,9 @@ def build_batch(
     skip_baseline_filter: bool = False,
 ) -> SupplyBatch:
     candidates = _draw_from_streams(streams, epoch_id, max(1, target_count * 2), ratios)
-    registry = FreshnessRegistry(
-        freshness_path,
-        public_corpus_bloom=getattr(settings, "lemma_supply_public_corpus_bloom_path", None),
-    )
+    registry = FreshnessRegistry(freshness_path, settings.lemma_supply_public_corpus_bloom_path)
     accepted: list[Problem] = []
-    accepted_hashes: list[str] = []
+    hashes: list[str] = []
     for problem in candidates:
         if len(accepted) >= target_count:
             break
@@ -87,11 +73,11 @@ def build_batch(
             continue
         registry.record(statement)
         accepted.append(problem)
-        accepted_hashes.append(statement_hash(statement))
+        hashes.append(statement_hash(statement))
     return SupplyBatch(
         epoch_id=epoch_id,
         problems=accepted,
-        commitment=EpochCommitment(epoch_id=epoch_id, root_hex=merkle_root(accepted_hashes)),
+        commitment=EpochCommitment(epoch_id=epoch_id, root_hex=merkle_root(hashes)),
     )
 
 
@@ -120,16 +106,13 @@ def build_problems_for_epoch(
     subtensor: bittensor.Subtensor | None,
     wallet: bittensor.Wallet,
 ) -> tuple[list[Problem], int]:
-    """Compose streams, run pipeline, anchor batch Merkle root; return ``(problems, anchored_block)``."""
     batch = build_batch(
         settings, build_streams(settings),
         epoch_id=epoch_id, target_count=target_count,
         freshness_path=settings.lemma_supply_freshness_path, skip_baseline_filter=True,
     )
-    stamp = anchor_batch(
+    anchored_block = anchor_batch(
         subtensor, wallet=wallet, netuid=settings.netuid,
         epoch_id=epoch_id, merkle_root_hex=batch.commitment.root_hex,
     )
-    return batch.problems, stamp.block
-
-
+    return batch.problems, anchored_block
