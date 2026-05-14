@@ -13,12 +13,14 @@ def workspace_template_cache_key(problem: Problem) -> str:
     h = hashlib.sha256()
     for part in (problem.id, problem.mathlib_rev, problem.lean_toolchain,
                  problem.challenge_source(), problem.solution_source()):
-        h.update(part.encode("utf-8")); h.update(b"\x1e")
+        h.update(part.encode("utf-8"))
+        h.update(b"\x1e")
     return h.hexdigest()[:48]
 
 
-def workspace_verify_cache_key(problem: Problem, submission_src: str,
-                               *, include_submission_fingerprint: bool) -> str:
+def workspace_verify_cache_key(
+    problem: Problem, submission_src: str, *, include_submission_fingerprint: bool,
+) -> str:
     base = workspace_template_cache_key(problem)
     if not include_submission_fingerprint:
         return base
@@ -48,8 +50,9 @@ name = "Submission"
 '''
 
 
-def materialize_workspace(dest: Path, problem: Problem, submission_lean: str,
-                          *, preserve_lake: bool = False) -> None:
+def materialize_workspace(
+    dest: Path, problem: Problem, submission_lean: str, *, preserve_lake: bool = False,
+) -> None:
     if not (preserve_lake and dest.exists() and (dest / ".lake").is_dir()):
         if dest.exists():
             shutil.rmtree(dest)

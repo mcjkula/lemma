@@ -36,10 +36,9 @@ def miner_url(metagraph: bittensor.Metagraph, uid: int) -> str | None:
     except IndexError:
         return None
     ip = (ax.ip or "").strip()
-    port = int(ax.port or 0)
-    if not ip or ip == "0.0.0.0" or port <= 0:
+    if not ip or ip == "0.0.0.0" or ax.port <= 0:
         return None
-    return f"http://{ip}:{port}"
+    return f"http://{ip}:{ax.port}"
 
 
 async def _query_one(
@@ -80,9 +79,7 @@ async def broadcast_challenge(
         if url is None:
             return
         async with sem:
-            reply = await _query_one(
-                client, url, keypair, metagraph.hotkeys[uid], body, timeout_s,
-            )
+            reply = await _query_one(client, url, keypair, metagraph.hotkeys[uid], body, timeout_s)
         if reply is not None and reply.proof_script:
             out[uid] = reply
 
