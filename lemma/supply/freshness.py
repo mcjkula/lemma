@@ -1,10 +1,12 @@
-"""Hash registry: rejects theorems whose normalized form was published before."""
+"""Freshness gate: on-chain seen registry + off-chain public-corpus bloom filter."""
 
 from __future__ import annotations
 
 import hashlib
 import re
 from pathlib import Path
+
+from lemma.supply.bloom import BloomFilter
 
 
 def _normalize_statement(text: str) -> str:
@@ -18,18 +20,22 @@ def statement_hash(text: str) -> str:
 
 
 class FreshnessRegistry:
-    def __init__(self, store_path: Path | None = None) -> None:
+    def __init__(self, store_path: Path | None = None, public_corpus_bloom: Path | None = None) -> None:
         self._store_path = store_path
         self._seen: set[str] = set()
         if store_path and store_path.is_file():
-            with store_path.open("r", encoding="utf-8") as f:
-                for line in f:
-                    s = line.strip()
-                    if s:
-                        self._seen.add(s)
+            for line in store_path.read_text(encoding="utf-8").splitlines():
+                if line.strip():
+                    self._seen.add(line.strip())
+        self._bloom = BloomFilter.load(public_corpus_bloom) if public_corpus_bloom else None
 
     def is_fresh(self, text: str) -> bool:
-        return statement_hash(text) not in self._seen
+        h = statement_hash(text)
+        if h in self._seen:
+            return False
+        if self._bloom is not None and h.encode("utf-8") in self._bloom:
+            return False
+        return True
 
     def record(self, text: str) -> None:
         h = statement_hash(text)

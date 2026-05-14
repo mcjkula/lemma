@@ -64,7 +64,10 @@ def build_batch(
     skip_baseline_filter: bool = False,
 ) -> SupplyBatch:
     candidates = _draw_from_streams(streams, epoch_id, max(1, target_count * 2), ratios)
-    registry = FreshnessRegistry(freshness_path)
+    registry = FreshnessRegistry(
+        freshness_path,
+        public_corpus_bloom=getattr(settings, "lemma_supply_public_corpus_bloom_path", None),
+    )
     accepted: list[Problem] = []
     accepted_hashes: list[str] = []
     for problem in candidates:

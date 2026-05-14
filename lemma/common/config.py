@@ -122,6 +122,9 @@ class LemmaSettings(BaseSettings):
     lemma_supply_fallback_generated: bool = Field(
         default=False, validation_alias="LEMMA_SUPPLY_FALLBACK_GENERATED",
     )
+    lemma_supply_public_corpus_bloom_path: Path | None = Field(
+        default=None, validation_alias="LEMMA_SUPPLY_PUBLIC_CORPUS_BLOOM_PATH",
+    )
     lemma_inbound_max_chars: int = Field(
         default=500_000, ge=1024, validation_alias="LEMMA_INBOUND_MAX_CHARS",
     )
