@@ -114,28 +114,23 @@ async def _broadcast_theorem(
 ) -> dict[int, RevealPayload]:
     body = to_json(challenge)
     sem = asyncio.Semaphore(max(1, settings.lemma_lean_verify_max_concurrent * 2))
+    out: dict[int, RevealPayload] = {}
 
-    async def _one(uid: int) -> tuple[int, RevealPayload | None]:
+    async def _one(uid: int) -> None:
         url = _miner_url(metagraph, uid)
         if url is None:
-            return uid, None
-        receiver_ss58 = metagraph.hotkeys[uid]
+            return
         async with sem:
             reply = await _query_one(
-                client=client,
-                url=url,
-                keypair=wallet.hotkey,
-                receiver_ss58=receiver_ss58,
-                body=body,
-                timeout_s=timeout_s,
+                client=client, url=url, keypair=wallet.hotkey,
+                receiver_ss58=metagraph.hotkeys[uid], body=body, timeout_s=timeout_s,
             )
-        return uid, reply
-
-    results = await asyncio.gather(*(_one(uid) for uid in range(metagraph.n)))
-    out: dict[int, RevealPayload] = {}
-    for uid, reply in results:
         if reply is not None and reply.proof_script:
             out[uid] = reply
+
+    async with asyncio.TaskGroup() as tg:
+        for uid in range(metagraph.n):
+            tg.create_task(_one(uid))
     return out
 
 
