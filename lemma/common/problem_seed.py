@@ -1,7 +1,4 @@
-"""Map chain head to a stable per-epoch problem seed.
-
-``quantize`` mode: ``(chain_head // N) * N``. ``subnet_epoch``: ``(chain_head + netuid + 1) // (tempo + 1)``.
-"""
+"""Map chain head to a stable per-epoch problem seed."""
 
 from __future__ import annotations
 
@@ -14,35 +11,11 @@ ProblemSeedMode = Literal["quantize", "subnet_epoch"]
 
 def first_block_of_next_seed_window(chain_head_block: int, quantize_blocks: int) -> int:
     q = max(1, int(quantize_blocks))
-    b = int(chain_head_block)
-    return ((b // q) + 1) * q
+    return ((int(chain_head_block) // q) + 1) * q
 
 
 def blocks_until_quantize_boundary(chain_head_block: int, quantize_blocks: int) -> int:
     return max(1, first_block_of_next_seed_window(chain_head_block, quantize_blocks) - int(chain_head_block))
-
-
-def blocks_until_challenge_may_change(
-    *,
-    chain_head_block: int,
-    netuid: int,
-    mode: ProblemSeedMode | str,
-    quantize_blocks: int,
-    seed_tag: str,
-    subtensor: object,
-) -> tuple[int, str]:
-    mode_l = (mode or "subnet_epoch").strip().lower()
-    if mode_l == "quantize" or (seed_tag or "").strip().lower() == "quantize_fallback_no_tempo":
-        return blocks_until_quantize_boundary(chain_head_block, quantize_blocks), "quantize_window"
-    bu_fn = getattr(subtensor, "blocks_until_next_epoch", None)
-    if callable(bu_fn):
-        try:
-            bu = bu_fn(netuid)
-            if bu is not None:
-                return max(1, int(bu)), "subnet_epoch"
-        except Exception as e:
-            logger.debug("blocks_until_next_epoch failed netuid={}: {}", netuid, e)
-    return blocks_until_quantize_boundary(chain_head_block, quantize_blocks), "quantize_estimate"
 
 
 def problem_sample_seed_block(chain_head_block: int, quantize_blocks: int) -> int:
@@ -64,12 +37,8 @@ def subnet_epoch_index_seed(chain_head_block: int, netuid: int, tempo: int) -> i
 
 
 def resolve_problem_seed(
-    *,
-    chain_head_block: int,
-    netuid: int,
-    mode: ProblemSeedMode,
-    quantize_blocks: int,
-    subtensor: object,
+    *, chain_head_block: int, netuid: int, mode: ProblemSeedMode,
+    quantize_blocks: int, subtensor: object,
 ) -> tuple[int, str]:
     if mode == "subnet_epoch":
         tempo_fn = getattr(subtensor, "tempo", None)
@@ -78,3 +47,20 @@ def resolve_problem_seed(
             return problem_sample_seed_block(chain_head_block, quantize_blocks), "quantize_fallback_no_tempo"
         return subnet_epoch_index_seed(chain_head_block, netuid, int(tempo)), "subnet_epoch"
     return problem_sample_seed_block(chain_head_block, quantize_blocks), "quantize"
+
+
+def blocks_until_challenge_may_change(
+    *, chain_head_block: int, netuid: int, mode: ProblemSeedMode | str,
+    quantize_blocks: int, seed_tag: str, subtensor: object,
+) -> tuple[int, str]:
+    if (mode or "").strip().lower() == "quantize" or (seed_tag or "").strip().lower() == "quantize_fallback_no_tempo":
+        return blocks_until_quantize_boundary(chain_head_block, quantize_blocks), "quantize_window"
+    bu_fn = getattr(subtensor, "blocks_until_next_epoch", None)
+    if callable(bu_fn):
+        try:
+            bu = bu_fn(netuid)
+            if bu is not None:
+                return max(1, int(bu)), "subnet_epoch"
+        except Exception as e:
+            logger.debug("blocks_until_next_epoch failed netuid={}: {}", netuid, e)
+    return blocks_until_quantize_boundary(chain_head_block, quantize_blocks), "quantize_estimate"
