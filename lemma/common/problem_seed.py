@@ -14,16 +14,8 @@ def problem_sample_seed_block(chain_head_block: int, quantize_blocks: int) -> in
     return (chain_head_block // quantize_blocks) * quantize_blocks
 
 
-def first_block_of_next_seed_window(chain_head_block: int, quantize_blocks: int) -> int:
-    return problem_sample_seed_block(chain_head_block, quantize_blocks) + quantize_blocks
-
-
 def blocks_until_quantize_boundary(chain_head_block: int, quantize_blocks: int) -> int:
-    return max(1, first_block_of_next_seed_window(chain_head_block, quantize_blocks) - chain_head_block)
-
-
-def mix_sub_problem_seed(base_seed: int, sub_round: int) -> int:
-    return base_seed + sub_round * 1_000_003
+    return max(1, problem_sample_seed_block(chain_head_block, quantize_blocks) + quantize_blocks - chain_head_block)
 
 
 def effective_chain_head_for_problem_seed(chain_head_block: int, slack_blocks: int) -> int:
@@ -47,7 +39,7 @@ def resolve_problem_seed(
 
 
 def blocks_until_challenge_may_change(
-    *, chain_head_block: int, netuid: int, mode: ProblemSeedMode | str,
+    *, chain_head_block: int, netuid: int, mode: ProblemSeedMode,
     quantize_blocks: int, seed_tag: str, subtensor: bittensor.Subtensor,
 ) -> tuple[int, str]:
     if mode == "quantize" or seed_tag == "quantize_fallback_no_tempo":

@@ -2,8 +2,6 @@ from lemma.common.problem_seed import (
     blocks_until_challenge_may_change,
     blocks_until_quantize_boundary,
     effective_chain_head_for_problem_seed,
-    first_block_of_next_seed_window,
-    mix_sub_problem_seed,
     problem_sample_seed_block,
     resolve_problem_seed,
     subnet_epoch_index_seed,
@@ -14,15 +12,6 @@ def test_effective_chain_head_for_problem_seed() -> None:
     assert effective_chain_head_for_problem_seed(100, 0) == 100
     assert effective_chain_head_for_problem_seed(100, 1) == 99
     assert effective_chain_head_for_problem_seed(0, 5) == 0
-
-
-def test_mix_sub_problem_seed_is_deterministic_and_distinct() -> None:
-    base = 12345
-
-    seeds = [mix_sub_problem_seed(base, i) for i in range(4)]
-
-    assert seeds == [12345, 1012348, 2012351, 3012354]
-    assert len(set(seeds)) == len(seeds)
 
 
 def test_slack_aligns_quantize_straddlers() -> None:
@@ -90,12 +79,6 @@ def test_resolve_subnet_epoch_uses_tempo() -> None:
     )
     assert tag == "subnet_epoch"
     assert s == subnet_epoch_index_seed(5000, 3, 99)
-
-
-def test_first_block_of_next_seed_window() -> None:
-    assert first_block_of_next_seed_window(100, 100) == 200
-    assert first_block_of_next_seed_window(199, 100) == 200
-    assert first_block_of_next_seed_window(200, 100) == 300
 
 
 def test_blocks_until_quantize_boundary() -> None:

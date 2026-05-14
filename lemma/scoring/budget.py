@@ -47,9 +47,6 @@ def compute_budget(
             raw[uid] = sum(rewards[uid].values()) * layer_factor * reign_factor(reign_by_uid.get(uid, 0))
 
     total = sum(raw.values())
-    if total <= 0.0:
-        return {}, 1.0
     if total > 1.0:
-        raw = {uid: w / total for uid, w in raw.items()}
-        return raw, 0.0
+        return {uid: w / total for uid, w in raw.items()}, 0.0
     return raw, 1.0 - total

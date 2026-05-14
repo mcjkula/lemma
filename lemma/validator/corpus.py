@@ -20,12 +20,12 @@ class CorpusEntry:
     lean_toolchain: str
 
 
-def default_corpus_dir() -> Path:
-    return Path.home() / ".lemma" / "corpus"
+def _resolve(root: Path | None) -> Path:
+    return root or Path.home() / ".lemma" / "corpus"
 
 
 def append(entries: list[CorpusEntry], *, root: Path | None = None) -> Path:
-    target_root = root or default_corpus_dir()
+    target_root = _resolve(root)
     if not entries:
         return target_root
     target_root.mkdir(parents=True, exist_ok=True)
@@ -50,10 +50,9 @@ def append(entries: list[CorpusEntry], *, root: Path | None = None) -> Path:
 
 
 def publish_to_s3(destination: str, *, root: Path | None = None) -> int:
-    """Mirror local corpus dir to ``s3://bucket/prefix`` via ``aws s3 sync``."""
     if not destination.startswith("s3://"):
         raise ValueError(f"destination must be an s3:// URL, got {destination!r}")
-    source = root or default_corpus_dir()
+    source = _resolve(root)
     if not source.is_dir():
         return 0
     r = subprocess.run(  # noqa: S603

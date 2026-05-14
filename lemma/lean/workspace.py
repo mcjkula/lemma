@@ -1,8 +1,4 @@
-"""Lake workspace contents for sandbox verification.
-
-The sandbox writes these files into the worker container (no host filesystem cache);
-the bash verify script seeds ``.lake`` from the pre-baked stub on cold runs.
-"""
+"""Lake workspace contents for sandbox verification."""
 
 from __future__ import annotations
 
@@ -53,7 +49,6 @@ name = "Submission"
 
 
 def workspace_files(problem: Problem, submission_lean: str) -> dict[str, str]:
-    """Filename → content for one verify workspace. ``.lake`` is seeded by the verify script."""
     return {
         "Challenge.lean": problem.challenge_source(),
         "Solution.lean": problem.solution_source(),

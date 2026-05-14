@@ -12,7 +12,5 @@ def solve_fractions(
     solved_uids_by_theorem: dict[str, set[int]],
     active_uids: set[int],
 ) -> dict[str, float]:
-    if not active_uids:
-        return {tid: 0.0 for tid in solved_uids_by_theorem}
-    denom = len(active_uids)
+    denom = len(active_uids) or 1
     return {tid: len(uids & active_uids) / denom for tid, uids in solved_uids_by_theorem.items()}

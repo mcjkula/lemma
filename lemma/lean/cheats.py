@@ -37,7 +37,6 @@ def cheat_scan_stderr_tail(scan: CheatScan, *, max_len: int = 8000) -> str:
 
 
 def parse_axioms_from_lean_output(text: str) -> set[str] | None:
-    """Parse the ``#print axioms`` line from ``lake env lean AxiomCheck.lean``."""
     if "does not depend on any axioms" in text.lower():
         return set()
     m = re.search(r"depends on axioms:\s*\[([^\]]*)\]", text, re.IGNORECASE | re.DOTALL)
@@ -55,7 +54,7 @@ def lean_driver_failed(lean_output: str) -> bool:
 
 
 def lake_build_environment_failed(lean_output: str) -> bool:
-    """Lake/git failed for network or tooling — not a rejected proof or axiom issue."""
+    """Lake/git failed for network or tooling — distinguish from a rejected proof."""
     t = lean_output.lower()
     if any(s in t for s in (
         "could not resolve host", "couldn't resolve host", "network is unreachable",
