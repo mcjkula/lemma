@@ -39,7 +39,10 @@ def run_doctor() -> int:
         return 1
 
     click.echo(stylize("\n2  Configuration (.env)", fg="cyan", bold=True))
-    click.echo(stylize("   OK", fg="green") + f"    NETUID={settings.netuid}  lean_use_docker={settings.lean_use_docker}")
+    click.echo(
+        stylize("   OK", fg="green")
+        + f"    NETUID={settings.netuid}  lean_use_docker={settings.lean_use_docker}",
+    )
     click.echo(stylize("   .", dim=True) + f"    wallet={settings.wallet_cold}/{settings.wallet_hot}")
 
     click.echo(stylize("\n3  Lean sandbox", fg="cyan", bold=True))
@@ -47,7 +50,11 @@ def run_doctor() -> int:
     if worker:
         click.echo(stylize("   OK", fg="green") + f"    LEMMA_LEAN_DOCKER_WORKER={worker!r}")
     else:
-        click.echo(stylize("   WARN", fg="yellow") + "  LEMMA_LEAN_DOCKER_WORKER unset; validator cannot verify.", err=True)
+        click.echo(
+            stylize("   WARN", fg="yellow")
+            + "  LEMMA_LEAN_DOCKER_WORKER unset; validator cannot verify.",
+            err=True,
+        )
         ok = False
 
     click.echo(stylize("\n4  Chain RPC", fg="cyan", bold=True))

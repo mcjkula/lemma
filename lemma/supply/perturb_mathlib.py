@@ -50,7 +50,7 @@ def _load_seeds(path: str) -> tuple[_Seed, ...]:
 def _draw_param(rng: random.Random, spec: dict[str, Any]) -> str:
     kind = spec.get("kind")
     if kind == "ident":
-        return rng.choice(spec.get("pool") or ["x"])
+        return str(rng.choice(spec.get("pool") or ["x"]))
     return str(rng.randint(int(spec.get("lo", 2)), int(spec.get("hi", 97))))
 
 

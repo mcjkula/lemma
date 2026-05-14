@@ -5,7 +5,7 @@ from __future__ import annotations
 
 def base_reward(solve_fraction: float, *, beta: float = 2.0) -> float:
     """``(1 - solve_fraction) ** beta`` — uniformly-solved theorems pay 0."""
-    return max(0.0, (1.0 - solve_fraction) ** beta)
+    return float(max(0.0, (1.0 - solve_fraction) ** beta))
 
 
 def solve_fractions(

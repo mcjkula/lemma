@@ -29,13 +29,13 @@ def build_app(
         return await verify_epistula(request, receiver_ss58)
 
     @app.post("/lemma/commit")
-    async def commit(ctx: RequestContext = Depends(_verify)) -> Response:
+    async def commit(ctx: RequestContext = Depends(_verify)) -> Response:  # noqa: B008
         payload = from_json(ChallengePayload, ctx.body)
         reply = await handle_commit(payload, solver=solver)
         return Response(to_json(reply), media_type="application/json")
 
     @app.post("/lemma/reveal")
-    async def reveal(ctx: RequestContext = Depends(_verify)) -> Response:
+    async def reveal(ctx: RequestContext = Depends(_verify)) -> Response:  # noqa: B008
         payload = from_json(ChallengePayload, ctx.body)
         reply = await handle_reveal(payload, solver=solver)
         return Response(to_json(reply), media_type="application/json")

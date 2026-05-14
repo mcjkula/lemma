@@ -3,7 +3,6 @@
 from dataclasses import dataclass, field
 
 import pytest
-
 from lemma.common.subtensor import BurnUidUnavailable, resolve_burn_uid
 
 

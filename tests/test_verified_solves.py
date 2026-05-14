@@ -7,7 +7,6 @@ from lemma.protocol import RevealPayload
 from lemma.validator import verify as verify_mod
 from lemma.validator.verify import verified_solves
 
-
 _Settings = LemmaSettings
 
 

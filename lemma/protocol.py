@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass, field
-from typing import Any
+from typing import Any, TypeVar
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,6 +45,9 @@ def to_json(obj: Any) -> bytes:
     return json.dumps(asdict(obj), separators=(",", ":")).encode("utf-8")
 
 
-def from_json(cls: type, body: bytes | str) -> Any:
+_T = TypeVar("_T")
+
+
+def from_json(cls: type[_T], body: bytes | str) -> _T:
     raw = body.decode("utf-8") if isinstance(body, bytes) else body
     return cls(**json.loads(raw))

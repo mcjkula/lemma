@@ -10,7 +10,6 @@ import numpy as np
 import pytest
 from bittensor.core.types import ExtrinsicResponse
 from bittensor_wallet import Keypair
-
 from lemma.common.config import LemmaSettings
 from lemma.lean.sandbox import VerifyResult
 from lemma.problems.base import Problem

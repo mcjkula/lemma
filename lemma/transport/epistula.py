@@ -52,7 +52,7 @@ class VerifyOutcome:
 
 
 def _signing_message(ts: str, uuid: str, signed_for: str, signed_by: str, body: bytes) -> bytes:
-    return f"{ts}.{uuid}.{signed_by}.{signed_for}.{hashlib.sha256(body).hexdigest()}".encode("utf-8")
+    return f"{ts}.{uuid}.{signed_by}.{signed_for}.{hashlib.sha256(body).hexdigest()}".encode()
 
 
 def sign(

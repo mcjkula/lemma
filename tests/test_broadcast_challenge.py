@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 import httpx
 import numpy as np
 from bittensor_wallet import Keypair
-
 from lemma.protocol import ChallengePayload, RevealPayload, to_json
 from lemma.transport.client import broadcast_challenge, miner_url
 
@@ -65,8 +64,12 @@ def test_broadcast_skips_unreachable_and_collects_responses() -> None:
         axons=[_Axon("0.0.0.0", 0), _Axon("1.1.1.1", 8001), _Axon("2.2.2.2", 8002)],
     )
     replies = {
-        "http://1.1.1.1:8001/lemma/reveal": to_json(RevealPayload(theorem_id="t", metronome_id="1", proof_script="by trivial")),
-        "http://2.2.2.2:8002/lemma/reveal": to_json(RevealPayload(theorem_id="t", metronome_id="1", proof_script="by exact True.intro")),
+        "http://1.1.1.1:8001/lemma/reveal": to_json(
+            RevealPayload(theorem_id="t", metronome_id="1", proof_script="by trivial"),
+        ),
+        "http://2.2.2.2:8002/lemma/reveal": to_json(
+            RevealPayload(theorem_id="t", metronome_id="1", proof_script="by exact True.intro"),
+        ),
     }
 
     def handler(req: httpx.Request) -> httpx.Response:

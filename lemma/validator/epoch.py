@@ -16,7 +16,8 @@ from lemma.scoring.budget import compute_budget
 from lemma.scoring.reputation import load_reputation, save_reputation
 from lemma.supply.pipeline import build_problems_for_epoch
 from lemma.transport.client import broadcast_challenge
-from lemma.validator.corpus import CorpusEntry, append as append_corpus
+from lemma.validator.corpus import CorpusEntry
+from lemma.validator.corpus import append as append_corpus
 from lemma.validator.verify import verified_solves
 from lemma.validator.weights_policy import build_full_weights
 

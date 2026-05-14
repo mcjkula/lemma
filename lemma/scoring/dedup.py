@@ -10,8 +10,8 @@ _BINDER_PATTERNS = tuple(re.compile(p) for p in (
     rf"\bintro(?:s)?\s+((?:{_IDENT}\s*)+)",
     rf"\b(?:fun|λ)\s+((?:{_IDENT}\s*)+?)\s*(?:=>|↦|,)",
     rf"\blet\s+({_IDENT})\b",
-    rf"\bobtain\s+⟨([^⟩]+)⟩",
-    rf"\brcases\s+\S+\s+with\s+([^\n]+)",
+    r"\bobtain\s+⟨([^⟩]+)⟩",
+    r"\brcases\s+\S+\s+with\s+([^\n]+)",
     rf"\(\s*({_IDENT}(?:\s+{_IDENT})*)\s*:\s*[^)]+\)",
 ))
 

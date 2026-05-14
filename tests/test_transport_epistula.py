@@ -4,9 +4,7 @@ from __future__ import annotations
 
 import time
 
-import pytest
 from bittensor_wallet import Keypair
-
 from lemma.transport.epistula import ReplayCache, sign, verify
 
 
