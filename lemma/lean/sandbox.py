@@ -198,6 +198,7 @@ class LeanSandbox:
         lines = [
             f"export LEAN_NUM_THREADS={shlex.quote(_lean_num_threads_value())}",
             "set -euo pipefail",
+            "git config --global --add safe.directory '*' >/dev/null 2>&1 || true",
             "if [ -d /opt/lemma-stub ] && [ ! -d .lake ]; then",
             "  cp -a /opt/lemma-stub/.lake . 2>/dev/null || true",
             "  cp -a /opt/lemma-stub/lake-manifest.json . 2>/dev/null || true",
