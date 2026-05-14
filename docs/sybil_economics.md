@@ -23,7 +23,7 @@ Neither mechanism limits how many **distinct coldkeys** an attacker can register
 - **Verified identity** — coldkeys are not proof of personhood.
 - **Sybil-proof partitioning** — same-coldkey partitioning is bypassed by **more coldkeys**.
 - **Identity proof from UID variants** — variants raise the work cost of many
-  accounts, but they do not reveal common ownership.
+ accounts, but they do not reveal common ownership.
 - **Stake-weighted miner sampling** in the scoring loop beyond what Bittensor’s metagraph already implies for weights — Lemma does not implement an extra “only query high-stake miners” policy by default.
 
 ## Where real economic pressure comes from (Bittensor)
@@ -33,8 +33,8 @@ Subnet **UID slots are scarce** (typically 256 per subnet). **Registration cost*
 Rough equilibrium intuition (from [`sybil.realities.yaml`](../knowledge/sybil.realities.yaml)):
 
 ```text
-registration_cost ≈ expected_reward_per_slot   (long-run pressure)
-sybil deterrent    ≈ cost_of_N_slots > reward_from_running_N_parallel_miners
+registration_cost ≈ expected_reward_per_slot (long-run pressure)
+sybil deterrent ≈ cost_of_N_slots > reward_from_running_N_parallel_miners
 ```
 
 ## Design guidance for subnet operators
@@ -43,7 +43,7 @@ sybil deterrent    ≈ cost_of_N_slots > reward_from_running_N_parallel_miners
 2. **Do** assume attackers can obtain **many coldkeys** if slots are cheap or rewards are high.
 3. **Prefer** tasks where the useful work is the proof that verifies, not another subjective ranking signal.
 4. **Use** UID-specific variants when copy-across-account pressure matters more
-   than shared-theorem comparability.
+ than shared-theorem comparability.
 
 ## Decision gate before Sybil or reward scoring changes
 

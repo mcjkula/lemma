@@ -215,7 +215,7 @@ until proven otherwise.
 
 Formal theorem proving is becoming a serious AI frontier. Useful references:
 
-- [Olympiad-level formal mathematical reasoning with reinforcement learning](https://www.nature.com/articles/s41586-025-09833-y)
+- [competition-level formal mathematical reasoning with reinforcement learning](https://www.nature.com/articles/s41586-025-09833-y)
 - [The Millennium Prize Problems](https://www.claymath.org/millennium-problems/)
 - [Formal Theorem Proving by Rewarding LLMs to Decompose Proofs Hierarchically](https://arxiv.org/abs/2411.01829)
 - [List of unsolved problems in mathematics](https://en.wikipedia.org/wiki/List_of_unsolved_problems_in_mathematics)

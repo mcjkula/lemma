@@ -19,7 +19,7 @@ Plainly:
 
 - `root` can control the whole server.
 - `lemma` should only operate Lemma files, hotkeys, logs, Docker access, and
-  cache directories.
+ cache directories.
 - coldkeys should stay off the Droplet either way.
 
 This is a hardening step, not a reward or proof-mechanism change.
@@ -27,11 +27,11 @@ This is a hardening step, not a reward or proof-mechanism change.
 ## Safer Order
 
 1. Leave the working root services alone until you have a fresh live round with
-   miner responses, validator verification, and `set_weights`.
+ miner responses, validator verification, and `set_weights`.
 2. Migrate the miner Droplet first. It is simpler: no Lean Docker cache on the
-   hot path unless you enabled local miner verification.
+ hot path unless you enabled local miner verification.
 3. Migrate the validator/Lean-worker Droplet second. It needs Docker access and
-   correct ownership on `/var/lib/lemma-lean-cache`.
+ correct ownership on `/var/lib/lemma-lean-cache`.
 4. Change one Droplet, verify it, then change the next.
 
 ## What Changes?
@@ -80,7 +80,7 @@ uv sync --extra btcli
 ```
 
 3. Copy only hotkey files from root to the `lemma` user, if the current wallets
-   live under `/root/.bittensor`:
+ live under `/root/.bittensor`:
 
 ```bash
 sudo install -d -o lemma -g lemma /home/lemma/.bittensor

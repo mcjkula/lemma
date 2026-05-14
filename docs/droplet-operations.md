@@ -43,11 +43,11 @@ logs, edit docs, and configure systemd services.
 Use caution around custody and live operations:
 
 - Do not paste seed phrases, coldkey passwords, private key files, API keys, or
-  bearer tokens into chat.
+ bearer tokens into chat.
 - Do not let an assistant create or hold your coldkey.
 - Do not approve a command that transfers funds, stakes, unstakes, deletes a
-  wallet, destroys a Droplet, or opens broad firewall access unless you
-  understand the exact effect.
+ wallet, destroys a Droplet, or opens broad firewall access unless you
+ understand the exact effect.
 - Prefer asking an assistant to explain a command before you run it.
 
 ## Droplet And Firewall Setup

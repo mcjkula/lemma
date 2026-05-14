@@ -13,11 +13,11 @@ The reward path should be proof-only:
 
 - **Eligibility:** Lean accepts the submitted proof for the locked theorem.
 - **Scoring:** an eligible proof is a positive binary event; an ordinary miss or
-  Lean failure is a negative event.
+ Lean failure is a negative event.
 - **Allocation policy:** difficulty-weighted rolling history and same-coldkey
-  partitioning can change final weights only after eligibility.
+ partitioning can change final weights only after eligibility.
 - **Out of band:** informal reasoning can help humans, datasets, and debugging,
-  but it is not a reward axis.
+ but it is not a reward axis.
 
 See [proof-verification-incentives.md](proof-verification-incentives.md) for the concrete design.
 

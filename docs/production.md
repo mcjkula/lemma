@@ -6,7 +6,7 @@ Prerequisites: [getting-started.md](getting-started.md).
 
 - Build and pin the sandbox image ([`compose/lean.Dockerfile`](../compose/lean.Dockerfile)) to match catalog `lean_toolchain` / `mathlib_rev`; use an immutable production ref for `LEAN_SANDBOX_IMAGE` ([toolchain-image-policy.md](toolchain-image-policy.md)).
 - Set `LEAN_VERIFY_TIMEOUT_S`, CPU/memory, `LEAN_SANDBOX_NETWORK` for untrusted code.
-- Regenerate `minif2f_frozen.json` and `catalog_manifest.json` when catalog sources change ([governance.md](governance.md)).
+- Regenerate `legacy_frozen.json` and `catalog_manifest.json` when catalog sources change ([governance.md](governance.md)).
 
 ## Validator profile
 
@@ -76,22 +76,22 @@ Running miners or validators on a VPS is allowed operationally, but it changes
 the risk profile.
 
 - **Miner on VPS:** common and usually simpler than home networking because the
-  axon has a stable public IP and port. Keep the hotkey encrypted, restrict SSH,
-  run a firewall, and avoid storing the coldkey private file on the server.
+ axon has a stable public IP and port. Keep the hotkey encrypted, restrict SSH,
+ run a firewall, and avoid storing the coldkey private file on the server.
 - **Validator on VPS:** use a larger host than a cheap miner box. Validators need
-  Docker, Lean caches, and enough RAM/CPU for concurrent verification; a small
-  4 GB instance is usually miner-only or test-only.
+ Docker, Lean caches, and enough RAM/CPU for concurrent verification; a small
+ 4 GB instance is usually miner-only or test-only.
 - **Local machine:** good for development and private keys, but inbound miner
-  ports require router/firewall setup and VPNs can hide or change the reachable
-  address.
+ ports require router/firewall setup and VPNs can hide or change the reachable
+ address.
 - **Shared host failure:** multiple services on one VPS can all fail together if
-  the host, firewall, Docker daemon, or API budget fails. This is fine for tests;
-  production operators should monitor and isolate roles as stakes rise.
+ the host, firewall, Docker daemon, or API budget fails. This is fine for tests;
+ production operators should monitor and isolate roles as stakes rise.
 - **Warm-cache lesson:** the reliable speedup path is a light pinned Lean image,
-  persistent workspace cache on fast disk, and a long-lived Docker worker or
-  remote worker pool. Testnet measurements saw a simple generated proof around
-  292 s cold and 25 s warm on a 4 vCPU / 8 GB shared Linux worker; baked
-  all-Mathlib mega-images were brittle in that run.
+ persistent workspace cache on fast disk, and a long-lived Docker worker or
+ remote worker pool. Testnet measurements saw a simple generated proof around
+ 292 s cold and 25 s warm on a 4 vCPU / 8 GB shared Linux worker; baked
+ all-Mathlib mega-images were brittle in that run.
 
 For production, prefer: coldkey private material offline/local, only hotkeys on
 servers, explicit `AXON_EXTERNAL_IP`, explicit firewall rules, systemd or another
@@ -105,18 +105,18 @@ Use this sequence before adding more miner hotkeys or tuning validator shortcuts
 
 1. Run one miner hotkey on one VPS and one validator on a separate VPS.
 2. Record host shape, commit SHA, `lemma meta`, `.env` pins, subnet/netuid, and
-   current `btcli subnet show` snapshot.
+ current `btcli subnet show` snapshot.
 3. Enable timing logs: `LEMMA_MINER_FORWARD_TIMELINE=1`,
-   `LEMMA_LEAN_VERIFY_TIMING=1`, persistent
-   `LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`, bounded
-   `LEMMA_LEAN_WORKSPACE_CACHE_MAX_DIRS`,
-   `LEMMA_LEAN_WORKSPACE_CACHE_MAX_BYTES`,
-   `LEMMA_VALIDATOR_MIN_FREE_BYTES`, and `LEMMA_LEAN_DOCKER_WORKER=1`.
+ `LEMMA_LEAN_VERIFY_TIMING=1`, persistent
+ `LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`, bounded
+ `LEMMA_LEAN_WORKSPACE_CACHE_MAX_DIRS`,
+ `LEMMA_LEAN_WORKSPACE_CACHE_MAX_BYTES`,
+ `LEMMA_VALIDATOR_MIN_FREE_BYTES`, and `LEMMA_LEAN_DOCKER_WORKER=1`.
 4. Capture cold and warm validator verify times for the same generated theorem.
 5. Capture miner forward latency, prover retries/timeouts, axon reachability, and
-   validator `lemma_epoch_summary` (`scored=N`, verify failures, set_weights).
+ validator `lemma_epoch_summary` (`scored=N`, verify failures, set_weights).
 6. Add a second miner hotkey only after the single-hotkey path stays online and
-   answers inside the validator forward window.
+ answers inside the validator forward window.
 
 The practical target is not just a local `PASS`; it is miner forwards completing,
 validator Lean verification finishing, weights being set, and hotkeys earning

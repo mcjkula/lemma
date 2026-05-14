@@ -20,8 +20,8 @@ For audit or release hardening passes, also run full Bandit and pip-audit:
 ```bash
 uv run bandit -q -r lemma
 uv run pip-audit \
-  --ignore-vuln PYSEC-2025-49 \
-  --ignore-vuln PYSEC-2022-42969
+ --ignore-vuln PYSEC-2025-49 \
+ --ignore-vuln PYSEC-2022-42969
 ```
 
 Full Bandit may report low-severity findings for intentional subprocess calls

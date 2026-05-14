@@ -31,18 +31,18 @@ fresh setup.
 Best current practice:
 
 1. Build the sandbox image before running a validator:
-   `bash scripts/prebuild_lean_image.sh`.
+ `bash scripts/prebuild_lean_image.sh`.
 2. Keep a persistent workspace cache directory on fast local disk
-   (`LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`).
+ (`LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`).
 3. Run a long-lived Docker worker with `LEMMA_LEAN_DOCKER_WORKER` so verification
-   uses `docker exec` instead of creating a fresh container every proof.
+ uses `docker exec` instead of creating a fresh container every proof.
 4. Leave `LEMMA_LEAN_ALWAYS_CACHE_GET` unset in normal operation; set it only when
-   you intentionally want to refresh Lake caches.
+ you intentionally want to refresh Lake caches.
 5. Leave `LEMMA_LEAN_PROOF_METRICS` off for production-speed validation; enable
-   it only for calibration/export runs where the extra Lean probe is worth the
-   latency.
+ it only for calibration/export runs where the extra Lean probe is worth the
+ latency.
 6. Measure with `LEMMA_LEAN_VERIFY_TIMING=1` on production-like hardware before
-   shortening theorem windows.
+ shortening theorem windows.
 
 Cold-cache measurements should not be used as the steady-state validator budget,
 but they matter operationally: after a release, a new template, a new image, or a
@@ -97,9 +97,9 @@ remote worker throughput, and miner response latency on production-like Linux ho
 Also distinguish two clocks:
 
 - `LEMMA_PROBLEM_SEED_QUANTIZE_BLOCKS` controls how often the shared generated
-  theorem changes.
+ theorem changes.
 - The bundled validator service waits for subnet epoch boundaries before running
-  live rounds and `set_weights`.
+ live rounds and `set_weights`.
 
 Reducing theorem windows from 100 blocks to 50 or 25 blocks increases theorem
 variety and shortens miner response budgets, but it does not by itself make the

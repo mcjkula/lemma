@@ -44,7 +44,7 @@ Each release should record:
 - `validator_profile_sha256`, which includes `LEAN_SANDBOX_IMAGE`;
 - Docker golden test result;
 - generated-template Docker stub/witness gate result when generated supply
-  changes.
+ changes.
 
 ## Updating pins
 

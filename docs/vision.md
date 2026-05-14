@@ -69,8 +69,8 @@ function composition, matrices, group laws, graph relations, and light
 cryptography-style modular statements.
 
 The curated lane can add reviewed public theorem sets and benchmark-style
-formalizations, including miniF2F-style olympiad problems, Putnam-style
-problems, Mathlib-adjacent facts, and FormalMATH-style Lean statements when they
+formalizations, including competition-style problems
+problems, Mathlib-adjacent facts, and public corpus-style Lean statements when they
 fit the pinned toolchain.
 
 Difficulty should increase concretely as the network scales:
@@ -114,7 +114,7 @@ The near-term operator goal is plain:
 
 - a miner can run the AI proof path without bespoke support;
 - a validator can publish theorem challenges, verify proof files, and set
-  weights reliably;
+ weights reliably;
 - problem supply changes are tied to published registry hashes;
 - public dashboards explain what passed without leaking private proof exports;
 - changes to incentives preserve the binary Lean verification gate.

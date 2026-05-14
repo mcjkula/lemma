@@ -13,8 +13,8 @@ That means:
 - Do not treat SHA256 mixing as anti-precompute security.
 - Do use `problem_supply_registry_sha256` to keep validators on the same public hybrid supply.
 - Do treat registry hashes as alignment fingerprints, not as proof that the
-  supply is mathematically broad, bug-free, licensed, or faithful to any
-  informal source.
+ supply is mathematically broad, bug-free, licensed, or faithful to any
+ informal source.
 
 The current hybrid lane is steady traffic: deterministic, Lean-checkable challenges with known generated families and a reviewed curated catalog. The generated registry has 100 builders and explicit 10% / 35% / 50% / 5% easy / medium / hard / extreme split weights; hybrid source weights default to 60% generated and 40% catalog. Extreme is a rare stretch tier inside steady cadence, not the off-cadence bounty/campaign lane.
 
@@ -62,8 +62,8 @@ Do not add low-value templates merely to increase the builder count. A small set
 
 ## External source promotion
 
-External contest or benchmark sources such as miniF2F-style repositories,
-Compfiles, PutnamBench, FormalMATH, or mathlib samples can improve breadth, but
+External contest or benchmark sources such as competition-style repositories,
+public corpus, public corpus, public corpus, or mathlib samples can improve breadth, but
 they should not enter live `hybrid` supply until source review is complete.
 
 Before promotion, record:
@@ -73,11 +73,11 @@ Before promotion, record:
 - license and attribution requirements;
 - whether the row is solved, unsolved, training, validation, or test material;
 - whether the statement has a complete witness proof under Lemma's pinned
-  Lean/Mathlib toolchain;
+ Lean/Mathlib toolchain;
 - whether the statement is appropriate for normal cadence or belongs in a
-  campaign/bounty lane instead.
+ campaign/bounty lane instead.
 
-The current default live supply does not depend on imported miniF2F or Putnam
+The current default live supply does not depend on imported public corpus or
 rows. Generated builders are repo-authored templates with witness proofs, and
 the bundled curated catalog is a small reviewed live pack with authored public
 statements. The frozen/import tooling is useful for development and future
@@ -91,17 +91,17 @@ is a new security model.
 
 1. Run the cheap registry/template gate:
 
-   ```bash
-   uv run python scripts/ci_verify_generated_templates.py
-   ```
+ ```bash
+ uv run python scripts/ci_verify_generated_templates.py
+ ```
 
 2. If the sandbox image for the release is available, run the Lean template gate:
 
-   ```bash
-   RUN_DOCKER_LEAN_TEMPLATES=1 \
-     LEAN_SANDBOX_IMAGE=<immutable-image-ref> \
-     uv run python scripts/ci_verify_generated_templates.py
-   ```
+ ```bash
+ RUN_DOCKER_LEAN_TEMPLATES=1 \
+ LEAN_SANDBOX_IMAGE=<immutable-image-ref> \
+ uv run python scripts/ci_verify_generated_templates.py
+ ```
 
 3. Record the old and new `problem_supply_registry_sha256` and `generated_registry_sha256` from `uv run lemma meta`.
 4. Record the new `validator_profile_sha256` from `uv run lemma meta`.
@@ -109,7 +109,7 @@ is a new security model.
 6. Check whether any new builder family is a near-duplicate of an existing one.
 7. Confirm verification costs fit the published timeout policy.
 8. Announce the Git tag, immutable sandbox image ref, registry hashes, validator
-   profile hash, and cutover block/window together.
+ profile hash, and cutover block/window together.
 9. Keep the previous release runnable long enough for rollback.
 
 Decision record shape:

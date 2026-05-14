@@ -4,7 +4,7 @@
 forwards:
 
 1. `commit`: the miner solves the challenge and returns only
-   `proof_commitment_hex`.
+ `proof_commitment_hex`.
 2. `reveal`: the miner returns the cached proof and `commit_reveal_nonce_hex`.
 
 The validator keeps the commitment from phase 1 and accepts phase 2 only if the
@@ -43,7 +43,7 @@ It does not:
 - make the validator schedule or problem choice trustless,
 - protect against validator/miner collusion,
 - replace Lean verification, body-hash integrity, challenge-field binding, or
-  miner verify attest,
+ miner verify attest,
 - make the revealed proof private after the reveal phase.
 
 Both phases are run by the same validator process in one epoch. That is a real
@@ -61,7 +61,7 @@ If enabled, expect:
 - roughly double axon round-trip latency per sub-round,
 - reveal failures when miner cache entries expire or are lost,
 - `commit_reveal_rejects` in epoch logs when commits are missing or reveal
-  preimages do not match.
+ preimages do not match.
 
 Changing the threat model from same-round binding to stronger public fairness
 would need a different design, such as chain-anchored commitments or a

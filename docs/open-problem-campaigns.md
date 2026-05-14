@@ -44,10 +44,10 @@ source before the target is funded. Reviewers should check:
 - the source problem and citation are explicit;
 - the Lean definitions are standard, or any local definitions are justified;
 - quantifiers, domains, constants, side conditions, and edge cases match the
-  informal target;
+ informal target;
 - no local theorem, axiom, notation, or definition bakes in the desired result;
 - the statement still means something important after all imports and
-  dependencies are expanded.
+ dependencies are expanded.
 
 For steady generated and curated cadence tasks, the game is narrower: prove the
 published Lean statement. Those tasks have known witness proofs and are useful
@@ -65,24 +65,24 @@ Minimum review record:
 
 - original informal source, citation, and license/attribution notes;
 - upstream Lean source, commit, file, declaration, imports, and local
-  definitions;
+ definitions;
 - plain-English restatement of what the Lean declaration asserts;
 - comparison of quantifiers, domains, constants, hypotheses, edge cases, and
-  intended definitions;
+ intended definitions;
 - dependency audit for local axioms, theorem aliases, notation, or definitions
-  that could trivialize the target;
+ that could trivialize the target;
 - reviewer names or handles, expertise note, date, and sign-off status;
 - unresolved caveats, known mismatches, or reasons the statement is only a
-  proxy for the informal problem.
+ proxy for the informal problem.
 
 Reward implication:
 
 - `formalization_bounty` can pay for creating candidate Lean statements.
 - `faithfulness_review_bounty` can pay reviewers for accepting, rejecting, or
-  amending a candidate statement.
+ amending a candidate statement.
 - `dependency_lemma_bounty` can start after a statement is at least reviewed.
 - `final_theorem_bounty` should start only after the target is locked with a
-  reviewed statement hash.
+ reviewed statement hash.
 
 This is the main remaining human-review boundary for famous open problems.
 Lemma can make the proof check reproducible, but it still needs human
@@ -99,14 +99,14 @@ not automatic canon for Lemma.
 The campaign flow should be:
 
 1. Select a candidate Lean statement from Formal Conjectures or another serious
-   source.
+ source.
 2. Pin the upstream repository, commit, file, and declaration name.
 3. Record the original informal source and any source-specific license or
-   attribution requirements.
+ attribution requirements.
 4. Compare the Lean declaration, imports, local definitions, and dependencies
-   against the informal source.
+ against the informal source.
 5. Write a short faithfulness note explaining what the statement means and what
-   was checked.
+ was checked.
 6. Lock the reviewed statement hash and deadline in the campaign registry.
 7. Accept submit-when-ready Lean proofs against exactly that locked target.
 
@@ -129,34 +129,34 @@ title: "P vs NP"
 status: open
 domain: computational_complexity
 source_authority:
-  - clay_official
-  - standard_textbook_reference
+ - clay_official
+ - standard_textbook_reference
 lean_statement:
-  repo: LemmaOpenProblems
-  file: Clay/PvsNP.lean
-  declaration: Clay.PvsNP.P_ne_NP
-  upstream_repo: google-deepmind/formal-conjectures
-  upstream_commit: "<sha>"
-  upstream_file: FormalConjectures/...
-  upstream_declaration: "..."
+ repo: LemmaOpenProblems
+ file: Clay/PvsNP.lean
+ declaration: Clay.PvsNP.P_ne_NP
+ upstream_repo: google-deepmind/formal-conjectures
+ upstream_commit: "<sha>"
+ upstream_file: FormalConjectures/...
+ upstream_declaration: "..."
 statement_status: draft
 faithfulness_status: unreviewed
 faithfulness_review:
-  source_citation: "<informal source>"
-  reviewed_statement_hash: "<sha>"
-  reviewers:
-    - name: "<reviewer>"
-      status: signed
-  caveats: []
+ source_citation: "<informal source>"
+ reviewed_statement_hash: "<sha>"
+ reviewers:
+ - name: "<reviewer>"
+  status: signed
+ caveats: []
 mathlib_readiness: partial
 dependencies:
-  - complexity.languages
-  - complexity.polynomial_time
-  - complexity.verifiers
+ - complexity.languages
+ - complexity.polynomial_time
+ - complexity.verifiers
 reward_mode:
-  - formalization_bounty
-  - lemma_bounty
-  - final_theorem_bounty
+ - formalization_bounty
+ - lemma_bounty
+ - final_theorem_bounty
 ```
 
 Useful status fields are `draft`, `reviewed`, `canonical`, and `deprecated` for
@@ -185,8 +185,8 @@ into scored theorem campaigns.
 | Source type | Why it is useful | Caution |
 | --- | --- | --- |
 | [Formal Conjectures](https://google-deepmind.github.io/formal-conjectures/) | Lean 4 statements of open conjectures, already shaped for automated theorem proving and Mathlib gap analysis. | Many statements still need faithfulness review, dependency triage, and difficulty labeling before rewards. |
-| [Compfiles](https://dwrensha.github.io/compfiles/) / olympiad-style repositories | Good bridge between generated cadence theorems and harder curated work; many statements already have Lean context. | Solved entries are training/evaluation material, not bounty targets unless proofs are hidden or reformulated. |
-| [PutnamBench](https://trishullab.github.io/PutnamBench/) | Hard undergraduate competition formalizations with a public benchmark and leaderboard culture. | Benchmark use must avoid training leakage and respect the dataset's intended evaluation split. |
+| [public corpus](https://dwrensha.github.io/compfiles/) / competition-style repositories | Good bridge between generated cadence theorems and harder curated work; many statements already have Lean context. | Solved entries are training/evaluation material, not bounty targets unless proofs are hidden or reformulated. |
+| [public corpus](https://trishullab.github.io/public corpus/) | Hard undergraduate competition formalizations with a public benchmark and leaderboard culture. | Benchmark use must avoid training leakage and respect the dataset's intended evaluation split. |
 | FirstProof-style research challenges | Close to the long-term "submit when ready" vision: unpublished or newly released research lemmas, expert grading, and high difficulty. | Usually starts as informal LaTeX, not a Lean theorem; Lemma would need a separate formalization and faithfulness-review phase before proof rewards. |
 
 The safest bootstrap path is: import candidate ideas, create reviewed Lean

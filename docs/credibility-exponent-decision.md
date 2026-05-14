@@ -53,7 +53,7 @@ following in one intentional release:
 - Decide how sharply failures should compound.
 - Update `.env.example`, `LemmaSettings`, profile-hash tests, and operator docs.
 - Call out the reward impact in release notes so validators know their
-  `judge_profile_sha256` will change.
+ `judge_profile_sha256` will change.
 
 Do not use an exponent change as a substitute for a better proof-quality metric.
 It can make failed verification more expensive, but it cannot distinguish a clean

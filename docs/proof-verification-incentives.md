@@ -16,16 +16,16 @@ accepts the proof or rejects it.
 ## Reward Shape
 
 1. **Eligibility:** the submitted proof must pass the pinned Lean toolchain,
-   Mathlib revision, sandbox policy, theorem binding checks, and cheat scans.
+ Mathlib revision, sandbox policy, theorem binding checks, and cheat scans.
 2. **Proof event:** each eligible miner entry records a positive binary event.
-   Invalid, missing, late, or mismatched responses record a negative event when
-   the validator successfully queried that UID.
+ Invalid, missing, late, or mismatched responses record a negative event when
+ the validator successfully queried that UID.
 3. **Verifier reuse:** validators may reuse a Lean result for identical proof
-   payloads inside one epoch, but that does not remove a miner from rewards.
+ payloads inside one epoch, but that does not remove a miner from rewards.
 4. **Rolling weights:** per-UID rolling scores are updated by pass/fail events.
-   Harder splits move the rolling score more than easier splits. Positive
-   rolling scores become normalized miner weights; same-coldkey hotkeys share
-   one coldkey allocation instead of multiplying it.
+ Harder splits move the rolling score more than easier splits. Positive
+ rolling scores become normalized miner weights; same-coldkey hotkeys share
+ one coldkey allocation instead of multiplying it.
 
 ## Current Live Rollout
 

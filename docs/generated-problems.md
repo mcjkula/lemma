@@ -22,7 +22,7 @@ You should **not** picture a short list to memorize. You picture **many instance
 
 **Honest limit:** these are **variations inside fixed templates**, not “every possible theorem in mathematics.” Over time, miners may still recognize the builder families—that is normal. **More diversity** comes from higher-quality builders, the curated catalog lane, and later campaign/bounty lanes. See [problem-supply-policy.md](problem-supply-policy.md) for the explicit predictability boundary.
 
-**Future directions** (not all implemented): more builders or splits; imports from formalized contest corpora (e.g. miniF2F-style); harder multi-lemma templates; curated `sorry` bounties alongside generated traffic—governance decides what is live.
+**Future directions** (not all implemented): more builders or splits; imports from formalized contest corpora (e.g. competition-style); harder multi-lemma templates; curated `sorry` bounties alongside generated traffic—governance decides what is live.
 
 ## Adding new families
 

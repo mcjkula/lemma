@@ -33,9 +33,9 @@ Per-job `docker run` adds **hundreds of ms to seconds** of overhead (worse on Do
 
 ```bash
 docker run -d --name lemma-lean-worker --restart unless-stopped \
-  --network none \
-  -v /var/lib/lemma-lean-cache:/lemma-workspace:rw \
-  lemma/lean-sandbox:latest sleep infinity
+ --network none \
+ -v /var/lib/lemma-lean-cache:/lemma-workspace:rw \
+ lemma/lean-sandbox:latest sleep infinity
 ```
 
 3. Set **`LEMMA_LEAN_DOCKER_WORKER=lemma-lean-worker`** and ensure **`LEMMA_LEAN_VERIFY_WORKSPACE_CACHE_DIR`** (or **`LEMMA_LEAN_DOCKER_WORKER_HOST_ROOT`**) points at the **same host path** you mounted (`/var/lib/lemma-lean-cache`). Inside the container the mount path defaults to **`/lemma-workspace`** — override with **`LEMMA_LEAN_DOCKER_WORKER_MOUNT`** if you used a different mount point.

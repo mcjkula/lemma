@@ -93,7 +93,7 @@ proofs can enter live scoring.
 | ---- | -------- |
 | `LEMMA_PROBLEM_SOURCE=hybrid` | Default: deterministic mix of generated templates and curated catalog rows ([catalog-sources.md](catalog-sources.md)). |
 | `generated` | Block seed → templates only ([`generated.py`](../lemma/problems/generated.py)). |
-| `frozen` | Rows from `minif2f_frozen.json` — opt-in via **`LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`** (see [catalog-sources.md](catalog-sources.md)). |
+| `frozen` | Rows from `legacy_frozen.json` — opt-in via **`LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`** (see [catalog-sources.md](catalog-sources.md)). |
 
 Template or catalog changes need coordinated upgrades ([governance.md](governance.md)).
 
@@ -124,14 +124,14 @@ Concurrency caps such as **`LEMMA_LEAN_VERIFY_MAX_CONCURRENT`** limit how many p
 
 Two different clocks:
 
-1. **Forward HTTP wait** (miner → validator)  
-   Time the validator’s client will wait for your axon to return the full synapse. It is derived from remaining blocks to the next seed edge × `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, then clamped. This is usually where hard or extreme problems burn wall-clock: search, long tactic scripts, retries. Catalog difficulty (easy/medium/hard/extreme templates) mostly affects this phase.
+1. **Forward HTTP wait** (miner → validator) 
+ Time the validator’s client will wait for your axon to return the full synapse. It is derived from remaining blocks to the next seed edge × `LEMMA_BLOCK_TIME_SEC_ESTIMATE`, then clamped. This is usually where hard or extreme problems burn wall-clock: search, long tactic scripts, retries. Catalog difficulty (easy/medium/hard/extreme templates) mostly affects this phase.
 
-2. `LEAN_VERIFY_TIMEOUT_S` (validator sandbox)  
-   Time for `lake build` plus axiom/cheat checks on the returned script. The Lean kernel checks proof terms quickly relative to “finding” the proof; elaboration can still be slow when proofs are huge, automation expands large terms, or typeclass inference does heavy work (see the [mathlib overview](https://leanprover-community.github.io/mathlib-overview.html) for topic breadth — e.g. dense algebra, category theory, bundled structures). The first build in a cold Docker layer can also spend minutes downloading or elaborating Mathlib; warm caches behave much better.
+2. `LEAN_VERIFY_TIMEOUT_S` (validator sandbox) 
+ Time for `lake build` plus axiom/cheat checks on the returned script. The Lean kernel checks proof terms quickly relative to “finding” the proof; elaboration can still be slow when proofs are huge, automation expands large terms, or typeclass inference does heavy work (see the [mathlib overview](https://leanprover-community.github.io/mathlib-overview.html) for topic breadth — e.g. dense algebra, category theory, bundled structures). The first build in a cold Docker layer can also spend minutes downloading or elaborating Mathlib; warm caches behave much better.
 
-   Validators reject `proof_script` payloads over `SYNAPSE_MAX_PROOF_CHARS`
-   before scheduling Lean verification.
+ Validators reject `proof_script` payloads over `SYNAPSE_MAX_PROOF_CHARS`
+ before scheduling Lean verification.
 
 So: Lean can usually check a correct, modest submission quickly; the risky cases are enormous scripts, pathological elaboration, or cold-cache sandbox cost — not “kernel verification is inherently slow for topology.”
 
@@ -207,9 +207,9 @@ accounting.
 
 ## Checking a proof yourself (manual / online)
 
-- **Same setup as Lemma (recommended):** Save your `Submission.lean` to a file and run  
-  `lemma verify --problem <theorem-id> --submission path/to/Submission.lean`  
-  (e.g. `gen/7037400`). That uses the same Lake workspace + toolchain + Mathlib pin as validators — **no manual Lake setup**.
+- **Same setup as Lemma (recommended):** Save your `Submission.lean` to a file and run 
+ `lemma verify --problem <theorem-id> --submission path/to/Submission.lean` 
+ (e.g. `gen/7037400`). That uses the same Lake workspace + toolchain + Mathlib pin as validators — **no manual Lake setup**.
 
 ### [Lean 4 Web](https://live.lean-lang.org/) (“Lean in the browser”)
 
@@ -228,7 +228,7 @@ Order matters:
 1. **Lean sandbox** — Validators run **`lake build`** on your **`proof_script`** (as `Submission.lean`) together with the challenge, then axiom checks.
 
 2. **Reward eligibility** — Only responses that pass Lean can receive miner
-   rewards. A proof that fails verification cannot receive a reward score.
+ rewards. A proof that fails verification cannot receive a reward score.
 
 So repeated “failures” while you believe the proof is right are usually **environment** (Mathlib fetch, Docker network, cold cache, timeout) or **layout/policy**. The proof has to pass Lean before any reward score exists.
 

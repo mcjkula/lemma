@@ -46,20 +46,20 @@ change rewards or weights.
 Operator checklist:
 
 1. Pick a private path for `LEMMA_TRAINING_EXPORT_JSONL`; do not commit or publish
-   the export.
+ the export.
 2. Run with `LEMMA_TRAINING_EXPORT_PROFILE=full` and
-   `LEMMA_LEAN_PROOF_METRICS=1` long enough to collect varied successful proofs,
-   including multiple successful submissions on the same theorem ids.
+ `LEMMA_LEAN_PROOF_METRICS=1` long enough to collect varied successful proofs,
+ including multiple successful submissions on the same theorem ids.
 3. Keep a copy of the exact `.env` / validator settings used for the run.
-   Exports now include non-secret `export_context` hashes (`lemma_version`,
-   `judge_profile_sha256`,
-   `generated_registry_sha256`), but those hashes are not a replacement for the
-   full private run notes.
+ Exports now include non-secret `export_context` hashes (`lemma_version`,
+ `judge_profile_sha256`,
+ `generated_registry_sha256`), but those hashes are not a replacement for the
+ full private run notes.
 4. Run the analyzer below and save its text output beside the export.
 5. Treat `gate_verdict=research_only` as a hard stop for scoring changes.
-   `manual_review_required` still means review, not approval.
+ `manual_review_required` still means review, not approval.
 6. Make any future scoring-default change in a separate commit with docs,
-   migration notes, and the scoring/profile pin updated.
+ migration notes, and the scoring/profile pin updated.
 
 After collecting rows, run:
 
@@ -70,20 +70,20 @@ uv run python -m tools.proof_metrics_analyze /var/lib/lemma/proof-metrics.jsonl
 Keep the analyzer report with any scoring decision notes. Look first at:
 
 - `decision_data_blockers` and `decision_data_warnings`; blockers mean the
-  export is not varied enough for a scoring decision yet,
+ export is not varied enough for a scoring decision yet,
 - `decision_data_gaps`, which turns the blockers into concrete collection
-  targets such as `successful_rows+44`, `comparison_theorems+3`, or
-  `judge_profile_sha256_rows+6`,
+ targets such as `successful_rows+44`, `comparison_theorems+3`, or
+ `judge_profile_sha256_rows+6`,
 - `export_context`, which should show one validator profile and one generated
-  registry hash across successful rows,
+ registry hash across successful rows,
 - `rows_with_successful_proof_metrics` vs failed probe rows,
 - correlations between metric bytes / delimiter-count shape data, proof text
-  length, current `proof_intrinsic_score`, and any available quality labels,
+ length, current `proof_intrinsic_score`, and any available quality labels,
 - `within_theorem_comparisons` and `corr_within_theorem(...)`, which subtract
-  each theorem's baseline before comparing proof metrics to quality labels,
+ each theorem's baseline before comparing proof metrics to quality labels,
 - same-theorem disagreement candidates, which point to pairs where
-  metric bytes, delimiter count, or the current text heuristic is higher but
-  the quality label is equal or lower on the same theorem,
+ metric bytes, delimiter count, or the current text heuristic is higher but
+ the quality label is equal or lower on the same theorem,
 - padding-looking outliers and the conservative `gate_verdict`.
 
 Proof metrics in exports are analysis fields. Live scoring uses Lean
@@ -173,14 +173,14 @@ fails instead of silently selecting a legacy mode.
 
 - **`export_profile`**: `"full"`.
 - **`export_context`**: non-secret provenance hashes for the validator run:
-  `lemma_version`, `judge_profile_sha256`, and
-  `generated_registry_sha256`.
+ `lemma_version`, `judge_profile_sha256`, and
+ `generated_registry_sha256`.
 - **`theorem_statement`**, **`proof_script`**, optional labels: see [`training_export.py`](../lemma/validator/training_export.py).
 - **`coldkey`**: public metagraph coldkey when available; omitted if unavailable.
 - **`proof_metrics`**: optional compare-only Lean probe output when `LEMMA_LEAN_PROOF_METRICS=1`.
 - After the epoch, **`validator_weight`** is merged per UID. This is the final
-  normalized validator weight derived from rolling scores, not a proof-quality
-  or proof-efficiency score.
+ normalized validator weight derived from rolling scores, not a proof-quality
+ or proof-efficiency score.
 
 ### `summary` (`schema_version` 2)
 
@@ -192,14 +192,14 @@ fails instead of silently selecting a legacy mode.
 
 - **`record_type`**: `"round_summary"`.
 - Written once per exported epoch in every profile, including rounds where no UID
-  passed.
+ passed.
 - Includes **`block`**, **`theorem_id`**, and **`passed_uids`**.
 - Includes **`verify_infra_error_uids`** when validator-local verification
-  infrastructure failed for candidate responses; these are separated from Lean
-  proof failures.
+ infrastructure failed for candidate responses; these are separated from Lean
+ proof failures.
 - Includes **`rolling_score_by_uid`** and **`weight_by_uid`** when those maps are
-  non-empty, so dashboards and replay tools can separate validator rolling score
-  from chain metagraph score.
+ non-empty, so dashboards and replay tools can separate validator rolling score
+ from chain metagraph score.
 - Contains no proof text or private validator data.
 
 ## References

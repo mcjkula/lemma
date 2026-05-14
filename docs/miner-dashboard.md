@@ -23,18 +23,18 @@ Default hosts:
 
 ```text
 validator / Lean worker: root@167.99.145.132
-miner host:             root@161.35.50.115
-miner ports:            8091,8092,8093,8094,8095,8096
+miner host:    root@161.35.50.115
+miner ports:   8091,8092,8093,8094,8095,8096
 ```
 
 Override them when needed:
 
 ```bash
 uv run python -m tools.ops_dashboard \
-  --validator-host root@<validator-ip> \
-  --miner-host root@<miner-ip> \
-  --miner-ports 8091,8092 \
-  --out ops-dashboard.html
+ --validator-host root@<validator-ip> \
+ --miner-host root@<miner-ip> \
+ --miner-ports 8091,8092 \
+ --out ops-dashboard.html
 ```
 
 ## What It Can Tell You
@@ -50,7 +50,7 @@ uv run python -m tools.ops_dashboard \
 ## What It Cannot Tell You
 
 - It cannot prove a miner's latest proof passed just from miner logs. Miners do
-  not receive validator proof grades over axon.
+ not receive validator proof grades over axon.
 - It cannot replace validator logs or chain state.
 - It should not expose private training exports or proof text publicly.
 - It should not mutate services, wallets, firewall rules, rewards, or scoring.
@@ -70,7 +70,7 @@ The first public version should show only:
 - public hotkey;
 - validator rolling score used to build the latest weights;
 - chain score from the public metagraph incentive field, which can lag the
-  latest validator summary;
+ latest validator summary;
 - unique Lean-verified theorem count in the last 24 hours.
 - sortable miner columns.
 
@@ -83,9 +83,9 @@ Generate a local public snapshot with:
 
 ```bash
 uv run python -m tools.public_dashboard \
-  --summary-jsonl /var/lib/lemma/public-summary.jsonl \
-  --json-out public-dashboard.json \
-  --html-out public-dashboard.html
+ --summary-jsonl /var/lib/lemma/public-summary.jsonl \
+ --json-out public-dashboard.json \
+ --html-out public-dashboard.html
 ```
 
 When Lemma moves to a mainnet explorer, pass URL templates so UID, coldkey, and
@@ -93,8 +93,8 @@ hotkey cells become links:
 
 ```bash
 uv run python -m tools.public_dashboard \
-  --uid-url-template 'https://<explorer>/subnets/{netuid}/uids/{uid}' \
-  --account-url-template 'https://<explorer>/accounts/{address}'
+ --uid-url-template 'https://<explorer>/subnets/{netuid}/uids/{uid}' \
+ --account-url-template 'https://<explorer>/accounts/{address}'
 ```
 
 Publish only `public-dashboard.json` and `public-dashboard.html`. Do not publish

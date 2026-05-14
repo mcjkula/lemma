@@ -26,7 +26,7 @@ bulk more than proof quality:
 - Trivial scaffolding like repeated `have ... by trivial` can inflate structure.
 - Extra lines can increase the score without making the theorem harder.
 - Comment stripping removed the easiest padding path, but it did not solve the
-  general problem.
+ general problem.
 
 Raising this heuristic without a better foundation would reward padding. The
 live path avoids that problem by scoring only Lean-verified proof acceptance.
@@ -43,9 +43,9 @@ guesses.
 ## Acceptable Next Code Changes
 
 1. Add focused tests that preserve the current heuristic behavior for offline
-   reports, so accidental drift is visible.
+ reports, so accidental drift is visible.
 2. Prototype metrics outside the live default path, using signals
-   that Lean or its elaborator can justify.
+ that Lean or its elaborator can justify.
 3. Keep reward assembly tests pinned to proof-verification behavior.
 
 ## Offline Metric Gate
@@ -56,7 +56,7 @@ An offline proof metric is worth keeping only if it is:
 - Cheap enough for explicit export or shadow runs.
 - Harder to pad than proof text length.
 - Covered by tests with honest short proofs, honest longer proofs, and padding
-  attempts.
+ attempts.
 
 Possible research directions include proof term size, elaborator trace summaries,
 nontrivial goal transitions, tactic trace structure, and imported theorem usage.
@@ -70,22 +70,22 @@ claims, back them with real export data and adversarial fixtures.
 Minimum gate for the next metric review:
 
 1. Collect a real validator `full` export with `LEMMA_LEAN_PROOF_METRICS=1`
-   ([training_export.md](training_export.md)). Use only rows where the
-   proof-metric probe exits successfully. The export must include same-theorem
-   comparisons: several theorem ids should have multiple successful submissions
-   from multiple UIDs, otherwise metric size mostly measures theorem size rather
-   than proof quality. Successful rows must also come from one
-   consistent `judge_profile_sha256`; mixed validator profiles are not decision
-   evidence.
+ ([training_export.md](training_export.md)). Use only rows where the
+ proof-metric probe exits successfully. The export must include same-theorem
+ comparisons: several theorem ids should have multiple successful submissions
+ from multiple UIDs, otherwise metric size mostly measures theorem size rather
+ than proof quality. Successful rows must also come from one
+ consistent `judge_profile_sha256`; mixed validator profiles are not decision
+ evidence.
 2. Run `tools.proof_metrics_analyze` and keep the report with the decision
-   notes. Failed probe rows are a reliability signal, not metric evidence.
+ notes. Failed probe rows are a reliability signal, not metric evidence.
 3. Compare the candidate metric against honest short proofs, honest longer
-   proofs, and padding attempts: comments, long string literals, unused trivial
-   `have` blocks, long names, and extra lines.
+ proofs, and padding attempts: comments, long string literals, unused trivial
+ `have` blocks, long names, and extra lines.
 4. Make one explicit choice in a separate commit:
-   - **keep** a metric in offline reports,
-   - **collect more data**, or
-   - **remove/reduce** a misleading proof-text metric from reports.
+ - **keep** a metric in offline reports,
+ - **collect more data**, or
+ - **remove/reduce** a misleading proof-text metric from reports.
 
 The gate fails if the candidate mostly tracks raw proof text length, favors
 obvious Lean-valid padding, has frequent probe failures, or adds enough runtime
@@ -112,11 +112,11 @@ Keep a Lean-backed metric in offline reports only if it is useful inside
 same-theorem comparisons:
 
 - `corr_within_theorem(candidate, quality_label)` is positive enough to matter
-  across multiple theorem ids, not just globally correlated with theorem size.
+ across multiple theorem ids, not just globally correlated with theorem size.
 - same-theorem metric/label disagreement examples are sparse and explainable
-  under manual review.
+ under manual review.
 - Padding fixtures and real rows do not show the candidate repeatedly rewarding
-  comments, strings, unused trivial `have` blocks, long names, or extra lines.
+ comments, strings, unused trivial `have` blocks, long names, or extra lines.
 - Runtime cost and probe failure rate are low enough for validator operations.
 
 ### Collect More Data
@@ -133,9 +133,9 @@ Reduce or remove the proof-text component when the evidence shows it is mostly a
 liability:
 
 - same-theorem disagreement examples repeatedly show the text heuristic
-  preferring worse proofs.
+ preferring worse proofs.
 - The heuristic mostly tracks proof length or syntactic bulk after comment
-  stripping.
+ stripping.
 - No candidate Lean-backed metric clears the offline metric gate.
 - Keeping the heuristic would encourage miners to pad Lean-valid proofs.
 
@@ -208,9 +208,9 @@ Good prototype shape:
 - Reuse the existing verified workspace after Lean pass.
 - Add one extra Lean probe file only in the prototype path.
 - Record candidate metrics beside the current score so they can be compared on
-  real submissions before any public metric claims.
+ real submissions before any public metric claims.
 - Keep live proof-verification reward behavior pinned by tests while the
-  metric is evaluated.
+ metric is evaluated.
 
 Current prototype: set `LEMMA_LEAN_PROOF_METRICS=1` to attach compare-only
 `proof_metrics` to `VerifyResult`. The probe asks Lean to `#print` the verified
@@ -356,15 +356,15 @@ shape on real validator exports before trusting any report based on it.
 Signals to avoid as scoring inputs:
 
 - Wall-clock build time, because it depends on hardware, cache warmth, and Docker
-  placement.
+ placement.
 - Raw proof text length, because that is the current weak proxy.
 - Axiom count by itself, because legitimate math can require allowed classical
-  axioms.
+ axioms.
 
 ## Open Questions
 
 - Which Lean-backed signals are useful for offline proof-metric research?
 - Which informal proof explanations, if any, should be handled outside the live
-  protocol for human review or public writeups?
+ protocol for human review or public writeups?
 - Should hard theorem supply and bounty-style curation become the stronger long
-  term path instead of trying to infer proof difficulty from one submitted proof?
+ term path instead of trying to infer proof difficulty from one submitted proof?

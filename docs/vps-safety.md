@@ -12,10 +12,10 @@ For migrating existing root-run services to a dedicated service user, see
 Keep coldkeys local or offline. Put only hotkeys on servers.
 
 - **Coldkey:** treasury/control key. It can transfer TAO, stake, unstake, and
-  recover or replace hotkeys. Do not copy the coldkey private file or seed phrase
-  to a VPS.
+ recover or replace hotkeys. Do not copy the coldkey private file or seed phrase
+ to a VPS.
 - **Hotkey:** operational key. A miner or validator service can use it on a VPS.
-  If the server is compromised, replace the hotkey from the coldkey.
+ If the server is compromised, replace the hotkey from the coldkey.
 
 Do not paste seed phrases, coldkey passwords, or private key files into chat,
 logs, tickets, or shell history.
@@ -32,7 +32,7 @@ Good default for operators.
 4. Open only the miner axon port(s), for example `8091`.
 5. Run miners under systemd so they restart after reboots.
 6. Keep prover API keys in root-readable or service-user-readable `.env` files,
-   not in shell history.
+ not in shell history.
 
 Multiple miner hotkeys can share one VPS for testing, but each needs its own
 hotkey, `AXON_PORT`, log file, and service unit.
@@ -45,15 +45,15 @@ Good for persistent operation if the host is large enough.
 2. Copy only the validator hotkey to the VPS.
 3. Use Docker and a persistent Lean cache directory.
 4. Prefer a local long-lived Docker worker on the validator host:
-   `LEMMA_LEAN_DOCKER_WORKER=lemma-lean-worker`.
+ `LEMMA_LEAN_DOCKER_WORKER=lemma-lean-worker`.
 5. For systemd, start from
-   [`deploy/systemd/lemma-validator.service`](../deploy/systemd/lemma-validator.service)
-   and adjust paths only if your checkout or `uv` install differs.
+ [`deploy/systemd/lemma-validator.service`](../deploy/systemd/lemma-validator.service)
+ and adjust paths only if your checkout or `uv` install differs.
 6. If using a remote Lean worker, keep it on a private network or behind TLS and
-   `LEMMA_LEAN_VERIFY_REMOTE_BEARER`.
+ `LEMMA_LEAN_VERIFY_REMOTE_BEARER`.
 7. Avoid SSH tunnels for production validator verification. They are fine for
-   supervised tests, but one tunnel reset can turn a good miner round into
-   `verified=0`.
+ supervised tests, but one tunnel reset can turn a good miner round into
+ `verified=0`.
 
 ### Separate Lean Worker VPS
 
@@ -61,8 +61,8 @@ Useful when validator CPU or disk is the bottleneck.
 
 1. Bind the worker to `127.0.0.1` when it is on the same host as the validator.
 2. For cross-host workers, use a private VPC, firewall allowlist, TLS, and
-   bearer auth. `lemma lean-worker` requires bearer auth for non-loopback binds
-   unless the dev-only unauthenticated override is set.
+ bearer auth. `lemma lean-worker` requires bearer auth for non-loopback binds
+ unless the dev-only unauthenticated override is set.
 3. Monitor worker health and logs separately from validator logs.
 
 ## Creating A Separate Test Identity
@@ -83,7 +83,7 @@ Then copy the new coldkey public address and fund it locally:
 
 ```bash
 uv run btcli wallet transfer --wallet-name lemma --network test \
-  --destination <my_remote-coldkey-ss58> --amount <test-tao-amount>
+ --destination <my_remote-coldkey-ss58> --amount <test-tao-amount>
 ```
 
 Register the hotkey locally:
@@ -104,27 +104,27 @@ After registration, the miner or validator on the VPS needs the **hotkey**
 signing material, not the coldkey.
 
 1. On the machine where you created the wallet, open your Bittensor wallet
-   directory (commonly `~/.bittensor/wallets/<wallet-name>/`).
+ directory (commonly `~/.bittensor/wallets/<wallet-name>/`).
 2. **Never** copy `coldkey`, coldkey seed phrases, or coldkey passwords to the
-   VPS.
+ VPS.
 3. Copy **only** the subtree for this hotkey:
-   `.../wallets/<wallet-name>/hotkeys/<hotkey-name>/` (layout can vary slightly
-   by `btcli` version; copy the directory that holds **only** that hotkey’s
-   files).
+ `.../wallets/<wallet-name>/hotkeys/<hotkey-name>/` (layout can vary slightly
+ by `btcli` version; copy the directory that holds **only** that hotkey’s
+ files).
 4. On the VPS, recreate the same path under `~/.bittensor/wallets/<wallet-name>/`
-   and transfer with `scp -r` or `rsync`, for example:
+ and transfer with `scp -r` or `rsync`, for example:
 
 ```bash
 # From your laptop — replace user, host, wallet, and hotkey names
 ssh user@your-vps 'mkdir -p ~/.bittensor/wallets/my_remote/hotkeys'
 scp -r ~/.bittensor/wallets/my_remote/hotkeys/vps_hotkey \
-  user@your-vps:~/.bittensor/wallets/my_remote/hotkeys/
+ user@your-vps:~/.bittensor/wallets/my_remote/hotkeys/
 ```
 
 5. Tighten permissions on the VPS (`chmod -R go-rwx ~/.bittensor/wallets` or run
-   the service as a dedicated user). Point Lemma / `btcli` at this wallet and
-   hotkey name; **hotkey-only** custody is enough for signing miner or validator
-   traffic.
+ the service as a dedicated user). Point Lemma / `btcli` at this wallet and
+ hotkey name; **hotkey-only** custody is enough for signing miner or validator
+ traffic.
 
 Assistants, docs generators, and similar tools should **not** create, store, or
 custody coldkeys for an operator. They can help write commands, inspect public

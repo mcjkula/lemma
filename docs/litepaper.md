@@ -96,7 +96,7 @@ path is a ladder:
 2. broader theorem supply across more mathematical fields;
 3. steadily harder formal statements as the network scales;
 4. winner-take-all rewards for especially difficult targets and open
-   mathematical problems.
+ mathematical problems.
 
 ## Concrete Example
 
@@ -116,14 +116,14 @@ import Mathlib
 namespace Submission
 
 theorem sum_first_odds (n : Nat) :
-    (Finset.range n).sum (fun k => 2 * k + 1) = n ^ 2 :=
-  by
-    induction n with
-    | zero =>
-        simp
-    | succ n ih =>
-        rw [Finset.sum_range_succ, ih]
-        ring
+ (Finset.range n).sum (fun k => 2 * k + 1) = n ^ 2 :=
+ by
+ induction n with
+ | zero =>
+  simp
+ | succ n ih =>
+  rw [Finset.sum_range_succ, ih]
+  ring
 
 end Submission
 ```
@@ -196,8 +196,8 @@ function composition, matrices, group laws, graph relations, and light
 cryptography-style modular statements.
 
 The curated lane can bring in reviewed public theorem sets and benchmark-style
-formalizations, including miniF2F-style olympiad problems, Putnam-style
-problems, Mathlib-adjacent facts, and FormalMATH-style Lean statements when they
+formalizations, including competition-style problems
+problems, Mathlib-adjacent facts, and public corpus-style Lean statements when they
 fit the pinned toolchain.
 
 Difficulty should increase concretely, not just by label. Good supply expansion
@@ -215,7 +215,7 @@ supply, not secrecy:
 - coordinate supply registry upgrades;
 - measure solve and verify time;
 - later add winner-take-all rewards for especially difficult targets and open
-  mathematical problems.
+ mathematical problems.
 
 ## Transport and Operations
 
@@ -252,7 +252,7 @@ large public rewards.
 
 Useful references:
 
-- [Olympiad-level formal mathematical reasoning with reinforcement learning](https://www.nature.com/articles/s41586-025-09833-y)
+- [competition-level formal mathematical reasoning with reinforcement learning](https://www.nature.com/articles/s41586-025-09833-y)
 - [The Millennium Prize Problems](https://www.claymath.org/millennium-problems/)
 - [Formal Theorem Proving by Rewarding LLMs to Decompose Proofs Hierarchically](https://arxiv.org/abs/2411.01829)
 - [List of unsolved problems in mathematics](https://en.wikipedia.org/wiki/List_of_unsolved_problems_in_mathematics)
