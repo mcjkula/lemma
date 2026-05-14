@@ -31,10 +31,7 @@ async def signed_post(
 
 
 def miner_url(metagraph: bittensor.Metagraph, uid: int) -> str | None:
-    try:
-        ax = metagraph.axons[uid]
-    except IndexError:
-        return None
+    ax = metagraph.axons[uid]
     ip = (ax.ip or "").strip()
     if not ip or ip == "0.0.0.0" or ax.port <= 0:
         return None
@@ -71,7 +68,7 @@ async def broadcast_challenge(
     concurrency: int,
 ) -> dict[int, RevealPayload]:
     body = to_json(challenge)
-    sem = asyncio.Semaphore(max(1, concurrency))
+    sem = asyncio.Semaphore(concurrency)
     out: dict[int, RevealPayload] = {}
 
     async def _one(uid: int) -> None:

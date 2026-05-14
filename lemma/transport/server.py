@@ -10,6 +10,7 @@ from lemma.common.config import LemmaSettings
 from lemma.transport.epistula import EpistulaHeaders, ReplayCache, verify
 
 _REPLAY_CACHE = ReplayCache()
+_MAX_CHARS = LemmaSettings().lemma_inbound_max_chars
 
 
 @dataclass(frozen=True, slots=True)
@@ -18,15 +19,10 @@ class RequestContext:
     body: bytes
 
 
-async def verify_epistula(
-    request: Request,
-    receiver_ss58: str,
-    settings: LemmaSettings | None = None,
-) -> RequestContext:
+async def verify_epistula(request: Request, receiver_ss58: str) -> RequestContext:
     body = await request.body()
-    max_chars = (settings or LemmaSettings()).lemma_inbound_max_chars
-    if max_chars > 0 and len(body) > max_chars:
-        raise HTTPException(status_code=413, detail=f"body exceeds {max_chars} chars")
+    if _MAX_CHARS > 0 and len(body) > _MAX_CHARS:
+        raise HTTPException(status_code=413, detail=f"body exceeds {_MAX_CHARS} chars")
     headers = EpistulaHeaders.from_http_headers(dict(request.headers))
     if headers is None:
         raise HTTPException(status_code=401, detail="epistula: missing_headers")

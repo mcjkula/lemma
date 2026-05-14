@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import random
+from functools import cached_property
 from pathlib import Path
 
 from lemma.problems.base import Problem
@@ -34,15 +35,13 @@ class CompetitionFormalSource:
         self._path = jsonl_path
         self._toolchain = lean_toolchain
         self._rev = mathlib_rev
-        self._rows: list[dict[str, object]] | None = None
 
-    def _ensure(self) -> list[dict[str, object]]:
-        if self._rows is None:
-            self._rows = _load(self._path)
-        return self._rows
+    @cached_property
+    def _rows(self) -> list[dict[str, object]]:
+        return _load(self._path)
 
     def draw(self, epoch_id: int, count: int, rng_seed: bytes) -> list[Problem]:
-        rows = self._ensure()
+        rows = self._rows
         if not rows:
             return []
         rng = random.Random(hashlib.sha256(rng_seed + str(epoch_id).encode()).digest())

@@ -27,7 +27,7 @@ class Problem:
     def challenge_source(self) -> str:
         cf = self.extra.get("challenge_full")
         if isinstance(cf, str) and cf.strip():
-            return f"{self._imports_block()}\n\n{cf.strip()}\n" if self.imports else cf.strip() + "\n"
+            return f"{self._imports_block()}\n\n{cf.strip()}\n"
         return f"{self._imports_block()}\n\ntheorem {self.theorem_name} : {self.type_expr} := by\n  sorry\n"
 
     def solution_source(self) -> str:

@@ -27,11 +27,8 @@ class _Seed:
 
 @lru_cache(maxsize=4)
 def _load_seeds(path: str) -> tuple[_Seed, ...]:
-    p = Path(path)
-    if not p.is_file():
-        return ()
     out: list[_Seed] = []
-    for line in p.read_text(encoding="utf-8").splitlines():
+    for line in Path(path).read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line:
             continue
@@ -68,11 +65,9 @@ class PerturbedMathlibSource:
 
     def draw(self, epoch_id: int, count: int, rng_seed: bytes) -> list[Problem]:
         seeds = _load_seeds(self._seeds_path)
-        if not seeds:
-            return []
         rng = random.Random(hashlib.sha256(rng_seed + str(epoch_id).encode()).digest())
         out: list[Problem] = []
-        for i in range(max(0, count)):
+        for i in range(count):
             seed = rng.choice(seeds)
             digest = hashlib.sha256(f"{seed.id}/{epoch_id}/{i}".encode()).hexdigest()[:12]
             out.append(Problem(

@@ -6,6 +6,7 @@ import hashlib
 import random
 import re
 from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 
 from lemma.problems.base import Problem
@@ -36,12 +37,6 @@ def _scan_file(path: Path) -> list[_SorryHit]:
     return out
 
 
-def _crawl(root: Path) -> list[_SorryHit]:
-    if not root.is_dir():
-        return []
-    return [hit for path in sorted(root.rglob("*.lean")) for hit in _scan_file(path)]
-
-
 class MathlibSorrysSource:
     name = "mathlib_sorrys"
 
@@ -49,25 +44,22 @@ class MathlibSorrysSource:
         self._root = root
         self._toolchain = lean_toolchain
         self._rev = mathlib_rev
-        self._hits: list[_SorryHit] | None = None
 
-    def _ensure(self) -> list[_SorryHit]:
-        if self._hits is None:
-            self._hits = _crawl(self._root)
-        return self._hits
+    @cached_property
+    def _hits(self) -> list[_SorryHit]:
+        if not self._root.is_dir():
+            return []
+        return [hit for path in sorted(self._root.rglob("*.lean")) for hit in _scan_file(path)]
 
     def draw(self, epoch_id: int, count: int, rng_seed: bytes) -> list[Problem]:
-        hits = self._ensure()
+        hits = self._hits
         if not hits:
             return []
         rng = random.Random(hashlib.sha256(rng_seed + str(epoch_id).encode()).digest())
         chosen = rng.sample(hits, min(count, len(hits)))
         out: list[Problem] = []
         for hit in chosen:
-            try:
-                rel = hit.file_path.relative_to(self._root)
-            except ValueError:
-                rel = hit.file_path
+            rel = hit.file_path.relative_to(self._root)
             digest = hashlib.sha256(f"{rel}/{hit.theorem_name}".encode()).hexdigest()[:16]
             out.append(Problem(
                 id=f"sorry/{digest}",

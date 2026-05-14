@@ -17,11 +17,7 @@ from lemma.protocol import ChallengePayload, VerifyReply, from_json, to_json
 from lemma.transport.server import RequestContext, verify_epistula
 
 
-def build_app(
-    wallet: bittensor.Wallet,
-    *,
-    solver: Solver | None = None,
-) -> FastAPI:
+def build_app(wallet: bittensor.Wallet, *, solver: Solver | None = None) -> FastAPI:
     app = FastAPI()
     receiver_ss58 = wallet.hotkey.ss58_address
 
@@ -48,22 +44,20 @@ def build_app(
 
 
 class MinerService:
-    def __init__(self, settings: LemmaSettings | None = None) -> None:
-        self.settings = settings or LemmaSettings()
+    def __init__(self, settings: LemmaSettings) -> None:
+        self.settings = settings
 
     def run(self) -> None:
-        setup_logging(self.settings.log_level)
         s = self.settings
+        setup_logging(s.log_level)
         wallet = bittensor.Wallet(name=s.wallet_cold, hotkey=s.wallet_hot)
-        subtensor = get_subtensor(s)
-        external_ip = (s.axon_external_ip or "").strip() or discover_public_ipv4()
+        external_ip = s.axon_external_ip
+        if not external_ip and s.axon_discover_external_ip:
+            external_ip = discover_public_ipv4()
         if external_ip:
             serve_extrinsic(
-                subtensor=subtensor, wallet=wallet, ip=external_ip,
+                subtensor=get_subtensor(s), wallet=wallet, ip=external_ip,
                 port=s.axon_port, protocol=4, netuid=s.netuid,
             )
         logger.info("Miner HTTP listening port={} hotkey={}", s.axon_port, wallet.hotkey.ss58_address)
-        uvicorn.run(
-            build_app(wallet),
-            host="0.0.0.0", port=s.axon_port, log_level=s.log_level.lower(),
-        )
+        uvicorn.run(build_app(wallet), host="0.0.0.0", port=s.axon_port, log_level=s.log_level.lower())

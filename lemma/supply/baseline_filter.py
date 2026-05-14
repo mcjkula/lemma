@@ -24,10 +24,10 @@ def _baseline_submission(problem: Problem) -> str:
     )
 
 
-def is_trivial(settings: LemmaSettings, problem: Problem, *, budget_s: int | None = None) -> bool:
+def is_trivial(settings: LemmaSettings, problem: Problem) -> bool:
     return run_lean_verify(
         settings,
-        verify_timeout_s=budget_s if budget_s is not None else settings.lean_verify_timeout_s,
+        verify_timeout_s=settings.lean_verify_timeout_s,
         problem=problem,
         proof_script=_baseline_submission(problem),
     ).passed

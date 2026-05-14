@@ -10,20 +10,16 @@ from loguru import logger
 ProblemSeedMode = Literal["quantize", "subnet_epoch"]
 
 
-def _quantize(chain_head_block: int, q: int) -> int:
-    return (chain_head_block // max(1, q)) * max(1, q)
+def problem_sample_seed_block(chain_head_block: int, quantize_blocks: int) -> int:
+    return (chain_head_block // quantize_blocks) * quantize_blocks
 
 
 def first_block_of_next_seed_window(chain_head_block: int, quantize_blocks: int) -> int:
-    return _quantize(chain_head_block, quantize_blocks) + max(1, quantize_blocks)
+    return problem_sample_seed_block(chain_head_block, quantize_blocks) + quantize_blocks
 
 
 def blocks_until_quantize_boundary(chain_head_block: int, quantize_blocks: int) -> int:
     return max(1, first_block_of_next_seed_window(chain_head_block, quantize_blocks) - chain_head_block)
-
-
-def problem_sample_seed_block(chain_head_block: int, quantize_blocks: int) -> int:
-    return _quantize(chain_head_block, quantize_blocks)
 
 
 def mix_sub_problem_seed(base_seed: int, sub_round: int) -> int:
@@ -31,11 +27,11 @@ def mix_sub_problem_seed(base_seed: int, sub_round: int) -> int:
 
 
 def effective_chain_head_for_problem_seed(chain_head_block: int, slack_blocks: int) -> int:
-    return max(0, chain_head_block - max(0, slack_blocks))
+    return max(0, chain_head_block - slack_blocks)
 
 
 def subnet_epoch_index_seed(chain_head_block: int, netuid: int, tempo: int) -> int:
-    return (chain_head_block + netuid + 1) // (max(0, tempo) + 1)
+    return (chain_head_block + netuid + 1) // (tempo + 1)
 
 
 def resolve_problem_seed(

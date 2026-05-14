@@ -31,10 +31,6 @@ def test_miner_url_skips_zero_port() -> None:
     assert miner_url(_Meta(axons=[_Axon(ip="1.2.3.4", port=0)]), 0) is None
 
 
-def test_miner_url_skips_oob_uid() -> None:
-    assert miner_url(_Meta(axons=[_Axon(ip="1.2.3.4", port=8000)]), 7) is None
-
-
 def test_miner_url_returns_http_url() -> None:
     assert miner_url(_Meta(axons=[_Axon(ip="1.2.3.4", port=8000)]), 0) == "http://1.2.3.4:8000"
 

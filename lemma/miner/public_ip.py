@@ -18,9 +18,9 @@ def discover_public_ipv4(timeout_s: float = 5.0) -> str | None:
         try:
             r = httpx.get(url, params=params or {}, timeout=timeout_s)
             r.raise_for_status()
-            text = r.text.strip().split()[0] if r.text.strip() else ""
-            ipaddress.IPv4Address(text)
-            return text
+            ip = r.text.strip().split()[0]
+            ipaddress.IPv4Address(ip)
+            return ip
         except Exception as e:  # noqa: BLE001
             logger.debug("public IPv4 discovery failed via {}: {}", url, e)
     return None
