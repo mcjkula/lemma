@@ -69,6 +69,23 @@ def validator_dry_run_cmd() -> None:
     ValidatorService(settings, dry_run=True).run_blocking()
 
 
+@main.group("corpus", invoke_without_command=True)
+@click.pass_context
+def corpus_group(ctx: click.Context) -> None:
+    if ctx.invoked_subcommand is None:
+        click.echo(ctx.get_help())
+
+
+@corpus_group.command("push")
+@click.argument("destination")
+def corpus_push_cmd(destination: str) -> None:
+    """Mirror ``~/.lemma/corpus/`` to ``s3://bucket/prefix`` via ``aws s3 sync``."""
+    from lemma.validator.corpus import publish_to_s3
+
+    rc = publish_to_s3(destination)
+    raise SystemExit(rc)
+
+
 @main.command("weights")
 def weights_cmd() -> None:
     """Print chain head and netuid (debug)."""

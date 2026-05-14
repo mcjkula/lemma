@@ -1,8 +1,9 @@
-"""Public proof corpus writer (jsonl per epoch)."""
+"""Public proof corpus writer (jsonl per epoch) and S3 publisher."""
 
 from __future__ import annotations
 
 import json
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -52,3 +53,17 @@ def append(entries: list[CorpusEntry], *, root: Path | None = None) -> Path:
                     + "\n",
                 )
     return target_root
+
+
+def publish_to_s3(destination: str, *, root: Path | None = None) -> int:
+    """Mirror the local corpus directory to ``s3://bucket/prefix`` via ``aws s3 sync``."""
+    if not destination.startswith("s3://"):
+        raise ValueError(f"destination must be an s3:// URL, got {destination!r}")
+    source = root or default_corpus_dir()
+    if not source.is_dir():
+        return 0
+    r = subprocess.run(  # noqa: S603 — operator-supplied destination
+        ["aws", "s3", "sync", str(source), destination],
+        capture_output=True, text=True, check=False,
+    )
+    return int(r.returncode)
