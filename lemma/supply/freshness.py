@@ -10,7 +10,7 @@ from lemma.supply.bloom import BloomFilter
 
 
 def _normalize(text: str) -> str:
-    no_block = re.sub(r"/-[\s\S]*?-/", "", text or "")
+    no_block = re.sub(r"/-[\s\S]*?-/", "", text)
     no_line = re.sub(r"--[^\n]*", "", no_block)
     return re.sub(r"\s+", " ", no_line).strip()
 

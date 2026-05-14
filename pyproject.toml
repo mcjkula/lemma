@@ -26,10 +26,7 @@ dev = [
     "pytest-asyncio>=1.0,<2",
     "ruff>=0.6,<1",
     "mypy>=1.11,<2",
-    "pip-audit>=2.7,<3",
-    "bandit[toml]>=1.7,<2",
 ]
-wandb = ["wandb>=0.17,<1"]
 
 [project.scripts]
 lemma = "lemma.cli.main:main"
@@ -40,15 +37,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["lemma"]
-
-# Tighten transitive versions where compatible so `pip-audit` stays cleaner in CI.
-# `setuptools`/`wheel` are capped by `bittensor==10.3.0` (<71); those CVEs are ignored in CI until upstream relaxes.
-[tool.uv]
-constraint-dependencies = [
-    "urllib3>=2.7.0",
-    "pygments>=2.20.0",
-    "wheel>=0.46.2",
-]
 
 [tool.ruff]
 target-version = "py311"
@@ -69,6 +57,5 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 markers = [
-    "docker: tests that require Docker and the lean-sandbox image",
     "integration: tests that hit external systems (chain, docker) — opt-in via env",
 ]

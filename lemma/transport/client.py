@@ -20,22 +20,18 @@ async def signed_post(
     *,
     keypair: Keypair,
     signed_for_ss58: str,
-    extra_headers: dict[str, str] | None = None,
     timeout_s: float | None = None,
 ) -> httpx.Response:
     headers = sign(keypair=keypair, body=body, signed_for_ss58=signed_for_ss58).to_http_headers()
     headers["Content-Type"] = "application/json"
-    if extra_headers:
-        headers.update(extra_headers)
     return await client.post(url, content=body, headers=headers, timeout=timeout_s)
 
 
 def miner_url(metagraph: bittensor.Metagraph, uid: int) -> str | None:
     ax = metagraph.axons[uid]
-    ip = (ax.ip or "").strip()
-    if not ip or ip == "0.0.0.0" or ax.port <= 0:
+    if not ax.ip or ax.ip == "0.0.0.0" or ax.port <= 0:
         return None
-    return f"http://{ip}:{ax.port}"
+    return f"http://{ax.ip}:{ax.port}"
 
 
 async def _query_one(
