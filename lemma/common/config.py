@@ -450,41 +450,6 @@ class LemmaSettings(BaseSettings):
             "docs/validator.md and scripts/start_lean_docker_worker.sh."
         ),
     )
-    lean_verify_remote_url: str | None = Field(
-        default=None,
-        validation_alias="LEMMA_LEAN_VERIFY_REMOTE_URL",
-        description=(
-            "Optional base URL (http/https) of a dedicated Lean verify worker process "
-            "(POST `/verify` JSON — see `lemma lean-worker`). When unset, verification runs in-process "
-            "via `LeanSandbox` on this machine."
-        ),
-    )
-    lean_verify_remote_bearer: str | None = Field(
-        default=None,
-        validation_alias="LEMMA_LEAN_VERIFY_REMOTE_BEARER",
-        description=(
-            "Optional shared secret; sent as ``Authorization: Bearer`` when calling "
-            "``LEMMA_LEAN_VERIFY_REMOTE_URL``."
-        ),
-    )
-    lean_worker_allow_unauthenticated_non_loopback: bool = Field(
-        default=False,
-        validation_alias="LEMMA_LEAN_WORKER_ALLOW_UNAUTHENTICATED_NON_LOOPBACK",
-        description=(
-            "Explicit dev override for `lemma lean-worker --host` values outside loopback when no "
-            "LEMMA_LEAN_VERIFY_REMOTE_BEARER is configured."
-        ),
-    )
-    lean_verify_remote_timeout_margin_s: float = Field(
-        default=30.0,
-        ge=0.0,
-        le=600.0,
-        validation_alias="LEMMA_LEAN_VERIFY_REMOTE_TIMEOUT_MARGIN_S",
-        description=(
-            "Added to ``LEAN_VERIFY_TIMEOUT_S`` (per-request split scaling included) "
-            "for HTTP client read timeout."
-        ),
-    )
     set_weights_max_retries: int = Field(
         default=3,
         ge=1,

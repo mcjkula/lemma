@@ -366,16 +366,7 @@ def _run_preview_session(
                         dim=True,
                     ),
                 )
-            remote_u = (settings.lean_verify_remote_url or "").strip()
-            if remote_u:
-                click.echo(
-                    stylize(
-                        f"Lean verify — remote worker `{remote_u}` (POST /verify). "
-                        "Unset LEMMA_LEAN_VERIFY_REMOTE_URL to verify locally.",
-                        fg="cyan",
-                    ),
-                )
-            elif not use_docker:
+            if not use_docker:
                 click.echo(
                     stylize(
                         "Lean verify — host `lake` (opt‑in; warm Mathlib can be fast). "
@@ -411,9 +402,7 @@ def _run_preview_session(
             )
             click.echo(
                 stylize(
-                    "— Lean verify (same kernel check as validators; "
-                    + ("remote POST /verify when LEMMA_LEAN_VERIFY_REMOTE_URL is set; " if remote_u else "")
-                    + "not on-chain scoring) —",
+                    "— Lean verify (same kernel check as validators; not on-chain scoring) —",
                     fg="cyan",
                     bold=True,
                 ),
@@ -436,18 +425,7 @@ def _run_preview_session(
                     click.echo("")
                 tail = (vr.stderr_tail or "") + (vr.stdout_tail or "")
                 tail_lower = tail.lower()
-                if lean_vr is not None and lean_vr.reason == "remote_error":
-                    click.echo(
-                        stylize(
-                            "Hint: Remote Lean verify could not reach LEMMA_LEAN_VERIFY_REMOTE_URL (connection "
-                            "refused, timeout, or TLS). Start `lemma lean-worker` if you use localhost:8787, fix "
-                            "the URL, or unset LEMMA_LEAN_VERIFY_REMOTE_URL to verify locally (Docker or "
-                            "`--host-lean` with LEMMA_ALLOW_HOST_LEAN=1).",
-                            dim=True,
-                        ),
-                        err=True,
-                    )
-                elif lake_build_environment_failed(tail):
+                if lake_build_environment_failed(tail):
                     click.echo(
                         stylize(
                             "Hint: `lake` could not reach the network (e.g. GitHub for Mathlib). "
