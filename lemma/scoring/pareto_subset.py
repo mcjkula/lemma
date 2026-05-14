@@ -22,9 +22,6 @@ def pareto_layers(rewards: dict[int, dict[str, float]]) -> list[list[int]]:
             uid for uid, row in pool.items()
             if not any(_dominates(other, row) for o_uid, other in pool.items() if o_uid != uid)
         ]
-        if not front:
-            layers.append(sorted(pool))
-            break
         layers.append(sorted(front))
         for uid in front:
             del pool[uid]
