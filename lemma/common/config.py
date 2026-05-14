@@ -96,14 +96,6 @@ class LemmaSettings(BaseSettings):
         validation_alias="LEMMA_HYBRID_CATALOG_WEIGHT",
         description="Deterministic hybrid source weight for bundled curated catalog problems.",
     )
-    lemma_dev_allow_frozen_problem_source: bool = Field(
-        default=False,
-        validation_alias="LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE",
-        description=(
-            "Allow LEMMA_PROBLEM_SOURCE=frozen (bundled public-eval catalog). Default false — "
-            "subnet-like deployments should use hybrid supply."
-        ),
-    )
     problem_seed_quantize_blocks: int = Field(
         default=100,
         ge=1,
@@ -134,11 +126,6 @@ class LemmaSettings(BaseSettings):
             "deadline math (same value used for both). Default 0; try 1 if validators disagree on theorem by "
             "one block near quantize boundaries."
         ),
-    )
-    minif2f_catalog_path: Path | None = Field(
-        default=None,
-        validation_alias="LEMMA_MINIF2F_CATALOG_PATH",
-        description="Optional path to frozen JSON array (default: bundled lemma/problems/minif2f_frozen.json).",
     )
     generated_registry_expected_sha256: str | None = Field(
         default=None,

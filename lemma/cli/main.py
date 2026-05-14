@@ -285,7 +285,7 @@ def problems_list_cmd() -> None:
     if not rows:
         click.echo(
             "No rows to list (LEMMA_PROBLEM_SOURCE=generated uses infinite seed IDs gen/<block>). "
-            "Set LEMMA_PROBLEM_SOURCE=frozen to enumerate minif2f_frozen.json.",
+            "Use a curated catalog source for static enumeration.",
         )
         return
     for p in rows:
