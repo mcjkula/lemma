@@ -6,19 +6,19 @@ import asyncio
 import time
 from typing import TYPE_CHECKING
 
-import bittensor as bt
+import bittensor
 import httpx
 from loguru import logger
 
+from lemma.catalog.constants import DEFAULT_LEAN_TOOLCHAIN, DEFAULT_MATHLIB_REV
 from lemma.common.problem_seed import (
     effective_chain_head_for_problem_seed,
-    mix_sub_problem_seed,
     resolve_problem_seed,
 )
 from lemma.common.subtensor import get_subtensor
 from lemma.lean.sandbox import VerifyResult
 from lemma.lean.verify_runner import run_lean_verify
-from lemma.problems.base import Problem, ProblemSource
+from lemma.problems.base import Problem
 from lemma.protocol import ChallengePayload, RevealPayload
 from lemma.scoring.champion_decay import apply_decay
 from lemma.scoring.dedup import submission_fingerprint
@@ -26,6 +26,7 @@ from lemma.scoring.first_to_solve import Solve, rank_solvers
 from lemma.scoring.observed_difficulty import base_reward, solve_fractions
 from lemma.scoring.pareto_subset import layer_weights, pareto_layers
 from lemma.scoring.reputation import load_reputation, save_reputation
+from lemma.supply.base import Source
 from lemma.supply.competition_formal import CompetitionFormalSource
 from lemma.supply.mathlib_sorrys import MathlibSorrysSource
 from lemma.supply.perturb_mathlib import PerturbedMathlibSource
@@ -47,7 +48,7 @@ def _verify_result_is_infra_failure(vr: VerifyResult) -> bool:
     return not vr.passed and vr.reason in _VERIFY_INFRA_REASONS
 
 
-def _miner_url(metagraph: bt.metagraph, uid: int) -> str | None:
+def _miner_url(metagraph: bittensor.metagraph, uid: int) -> str | None:
     try:
         ax = metagraph.axons[uid]
     except (IndexError, AttributeError):
@@ -59,7 +60,7 @@ def _miner_url(metagraph: bt.metagraph, uid: int) -> str | None:
     return f"http://{ip}:{port}"
 
 
-def _registration_blocks(metagraph: bt.metagraph) -> dict[int, int]:
+def _registration_blocks(metagraph: bittensor.metagraph) -> dict[int, int]:
     out: dict[int, int] = {}
     blocks = getattr(metagraph, "block_at_registration", None)
     if blocks is None:
@@ -76,7 +77,7 @@ async def _query_one(
     *,
     client: httpx.AsyncClient,
     url: str,
-    keypair: bt.Keypair,
+    keypair: bittensor.Keypair,
     receiver_ss58: str,
     body: bytes,
     timeout_s: float,
@@ -105,8 +106,8 @@ async def _broadcast_theorem(
     *,
     client: httpx.AsyncClient,
     settings: LemmaSettings,
-    wallet: bt.Wallet,
-    metagraph: bt.metagraph,
+    wallet: bittensor.Wallet,
+    metagraph: bittensor.metagraph,
     challenge: ChallengePayload,
     timeout_s: float,
 ) -> dict[int, RevealPayload]:
@@ -149,22 +150,8 @@ def _verify_proof(settings: LemmaSettings, problem: Problem, proof_script: str) 
         return VerifyResult(passed=False, reason="docker_error", stderr_tail=str(e)[:8000])
 
 
-def _problems_for_epoch(source: ProblemSource, problem_seed: int, k: int) -> list[Problem]:
-    return [source.sample(seed=mix_sub_problem_seed(problem_seed, i)) for i in range(max(1, k))]
-
-
-def _supply_pipeline_problems(
-    settings: LemmaSettings,
-    *,
-    epoch_id: int,
-    target_count: int,
-    subtensor: object,
-    wallet: object,
-) -> list[Problem]:
-    """Build the per-epoch batch from streams P/M/C and commit the Merkle root."""
-    from lemma.catalog.constants import DEFAULT_LEAN_TOOLCHAIN, DEFAULT_MATHLIB_REV
-
-    streams: dict[str, object] = {
+def _build_streams(settings: LemmaSettings) -> dict[str, Source]:
+    streams: dict[str, Source] = {
         "P": PerturbedMathlibSource(
             lean_toolchain=DEFAULT_LEAN_TOOLCHAIN,
             mathlib_rev=DEFAULT_MATHLIB_REV,
@@ -182,9 +169,20 @@ def _supply_pipeline_problems(
             lean_toolchain=DEFAULT_LEAN_TOOLCHAIN,
             mathlib_rev=DEFAULT_MATHLIB_REV,
         )
+    return streams
+
+
+def _supply_pipeline_problems(
+    settings: LemmaSettings,
+    *,
+    epoch_id: int,
+    target_count: int,
+    subtensor: object,
+    wallet: object,
+) -> list[Problem]:
     batch = build_batch(
         settings,
-        streams,  # type: ignore[arg-type]
+        _build_streams(settings),
         epoch_id=epoch_id,
         target_count=target_count,
         freshness_path=settings.lemma_supply_freshness_path,
@@ -198,9 +196,7 @@ def _verified_solves(
     settings: LemmaSettings,
     problems: dict[str, Problem],
     replies_by_theorem: dict[str, dict[int, RevealPayload]],
-    commit_block: int,
 ) -> tuple[dict[str, set[int]], dict[str, dict[int, str]]]:
-    """Return (solved_uids_by_theorem, proofs_by_theorem_uid)."""
     solved: dict[str, set[int]] = {tid: set() for tid in problems}
     proofs: dict[str, dict[int, str]] = {tid: {} for tid in problems}
     seen_fingerprints: dict[str, set[str]] = {tid: set() for tid in problems}
@@ -259,14 +255,9 @@ def _update_reigns(reign_by_uid: dict[int, int], champions: list[int]) -> dict[i
     return fresh
 
 
-async def run_epoch(
-    settings: LemmaSettings,
-    source: ProblemSource,
-    *,
-    dry_run: bool = False,
-) -> dict[int, float]:
+async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[int, float]:
     t0 = time.perf_counter()
-    wallet = bt.Wallet(name=settings.wallet_cold, hotkey=settings.wallet_hot)
+    wallet = bittensor.Wallet(name=settings.wallet_cold, hotkey=settings.wallet_hot)
     subtensor = get_subtensor(settings)
     metagraph = subtensor.metagraph(settings.netuid)
     cur_block = int(subtensor.get_current_block())
@@ -281,18 +272,16 @@ async def run_epoch(
         subtensor=subtensor,
     )
     k = max(1, int(settings.lemma_epoch_problem_count))
-    if settings.lemma_supply_pipeline_enabled:
-        problems_list = _supply_pipeline_problems(
-            settings,
-            epoch_id=problem_seed,
-            target_count=k,
-            subtensor=subtensor,
-            wallet=wallet,
-        )
-        if not problems_list:
-            problems_list = _problems_for_epoch(source, problem_seed, k)
-    else:
-        problems_list = _problems_for_epoch(source, problem_seed, k)
+    problems_list = _supply_pipeline_problems(
+        settings,
+        epoch_id=problem_seed,
+        target_count=k,
+        subtensor=subtensor,
+        wallet=wallet,
+    )
+    if not problems_list:
+        logger.warning("supply pipeline returned no problems epoch={}", problem_seed)
+        return {}
     problems = {p.id: p for p in problems_list}
 
     replies_by_theorem: dict[str, dict[int, RevealPayload]] = {}
@@ -316,7 +305,7 @@ async def run_epoch(
                 timeout_s=float(settings.forward_wait_max_s),
             )
 
-    solved, proofs = _verified_solves(settings, problems, replies_by_theorem, cur_block)
+    solved, proofs = _verified_solves(settings, problems, replies_by_theorem)
 
     rep_store = load_reputation(settings.lemma_reputation_state_path)
     weights = _compose_weights(
@@ -331,12 +320,7 @@ async def run_epoch(
     if not dry_run:
         save_reputation(settings.lemma_reputation_state_path, rep_store)
 
-    full, skip = build_full_weights(
-        metagraph.n,
-        weights,
-        empty_policy=settings.empty_epoch_weights_policy,
-        exclude_uid=None,
-    )
+    full, skip = build_full_weights(metagraph.n, weights)
     if not skip and not dry_run:
         subtensor.set_weights(
             wallet=wallet,

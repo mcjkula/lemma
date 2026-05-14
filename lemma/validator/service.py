@@ -4,9 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import os
-import time
 
-import bittensor as bt
 from loguru import logger
 
 import lemma.validator.epoch as ep
@@ -18,18 +16,13 @@ from lemma.common.problem_seed import (
     resolve_problem_seed,
 )
 from lemma.common.subtensor import get_subtensor
-from lemma.problems.factory import get_problem_source
-from lemma.problems.generated import generated_registry_sha256
-from lemma.problems.hybrid import problem_supply_registry_sha256
 
 _DOCKER_REQUIRED_ERROR = (
-    "lemma validator requires Docker for Lean verify (LEMMA_USE_DOCKER=true).\n"
-    "Host `lake` is not supported for validators — set LEMMA_USE_DOCKER=true in `.env`."
+    "lemma validator requires Docker for Lean verify (LEMMA_USE_DOCKER=true)."
 )
 
 
 def epoch_sleep_seconds(blocks_until_epoch: int, block_time_sec_estimate: float) -> float:
-    """Poll near epoch boundaries instead of trusting rough wall-clock estimates."""
     bu = int(blocks_until_epoch)
     if bu <= 1:
         return 0.0
@@ -39,7 +32,6 @@ def epoch_sleep_seconds(blocks_until_epoch: int, block_time_sec_estimate: float)
 
 
 def validator_retry_sleep_seconds(exc: BaseException, block_time_sec_estimate: float) -> float:
-    """Back off longer for RPC rate limits, briefly for ordinary epoch errors."""
     msg = str(exc).lower()
     if "429" in msg or "rate limit" in msg or "too many requests" in msg:
         return min(300.0, max(30.0, float(block_time_sec_estimate) * 5.0))
@@ -51,7 +43,6 @@ def validator_problem_window(
     subtensor: object,
     chain_head_block: int,
 ) -> tuple[int, int, str]:
-    """Return the active problem seed and blocks until it can change."""
     seed_head = effective_chain_head_for_problem_seed(
         int(chain_head_block),
         int(settings.lemma_problem_seed_chain_head_slack_blocks or 0),
@@ -74,58 +65,11 @@ def validator_problem_window(
     return int(problem_seed), int(blocks_until_change), edge
 
 
-def _require_docker_for_validator(settings: LemmaSettings) -> None:
-    """Validators must use Docker for Lean — no host-lake escape hatch."""
-    if settings.lean_use_docker:
-        return
-    raise SystemExit(_DOCKER_REQUIRED_ERROR)
-
-
-def validator_startup_issues(settings: LemmaSettings, *, dry_run: bool) -> tuple[list[str], list[str]]:
-    """Consensus-critical gates shared by `validator start` and `validator check`."""
+def validator_startup_issues(settings: LemmaSettings) -> list[str]:
     fatal: list[str] = []
-    warn: list[str] = []
-
     if not settings.lean_use_docker:
         fatal.append(_DOCKER_REQUIRED_ERROR)
-
-    problem_source = (settings.problem_source or "").strip().lower()
-    if problem_source == "hybrid":
-        if not (settings.problem_supply_registry_expected_sha256 or "").strip():
-            fatal.append(
-                "lemma validator requires LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED when "
-                "LEMMA_PROBLEM_SOURCE=hybrid (run `lemma configure subnet-pins`).",
-            )
-        else:
-            actual = problem_supply_registry_sha256(
-                generated_weight=settings.lemma_hybrid_generated_weight,
-                catalog_weight=settings.lemma_hybrid_catalog_weight,
-            )
-            expected = (settings.problem_supply_registry_expected_sha256 or "").strip()
-            if actual.strip().lower() != expected.lower():
-                fatal.append(
-                    f"problem supply mismatch: expected LEMMA_PROBLEM_SUPPLY_REGISTRY_SHA256_EXPECTED={expected!r} "
-                    f"but current code hashes to {actual!r}.\n"
-                    "Use the same lemma commit as the subnet, then `lemma configure subnet-pins` "
-                    "(or update the supply pin from `lemma meta --raw`).",
-                )
-    elif problem_source == "generated":
-        if not (settings.generated_registry_expected_sha256 or "").strip():
-            fatal.append(
-                "lemma validator requires LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED when "
-                "LEMMA_PROBLEM_SOURCE=generated (run `lemma configure subnet-pins`).",
-            )
-        else:
-            gr_actual = generated_registry_sha256()
-            gre = (settings.generated_registry_expected_sha256 or "").strip()
-            if gr_actual.strip().lower() != gre.lower():
-                fatal.append(
-                    f"generated registry mismatch: expected LEMMA_GENERATED_REGISTRY_SHA256_EXPECTED={gre!r} "
-                    f"but current code hashes to {gr_actual!r}.\n"
-                    "Use the same lemma commit as the subnet, then `lemma configure subnet-pins` "
-                    "(or update the registry pin from `lemma meta --raw`).",
-                )
-    return fatal, warn
+    return fatal
 
 
 class ValidatorService:
@@ -135,36 +79,19 @@ class ValidatorService:
 
     async def run_forever(self) -> None:
         setup_logging(self.settings.log_level)
-        logger.info(
-            "Validator running — press Ctrl+C to stop and return to your shell.",
-        )
+        logger.info("Validator running — press Ctrl+C to stop and return to your shell.")
         s = self.settings
-        fatal, warn = await asyncio.to_thread(validator_startup_issues, s, dry_run=self.dry_run)
-        for msg in warn:
-            logger.warning(msg)
+        fatal = await asyncio.to_thread(validator_startup_issues, s)
         if fatal:
             raise SystemExit(fatal[0])
-        if (s.problem_source or "").strip().lower() == "hybrid":
-            logger.info(
-                "problem_supply_registry_sha256={}",
-                problem_supply_registry_sha256(
-                    generated_weight=s.lemma_hybrid_generated_weight,
-                    catalog_weight=s.lemma_hybrid_catalog_weight,
-                ),
-            )
-        elif (s.problem_source or "").strip().lower() == "generated":
-            logger.info("generated_registry_sha256={}", generated_registry_sha256())
         subtensor = get_subtensor(s)
-        source = get_problem_source(s)
-        logger.info("problem_source={}", s.problem_source)
-        logger.info("validator cadence follows problem seed windows")
         last_problem_seed: int | None = None
         while True:
             try:
                 chain_head = int(subtensor.get_current_block())
                 problem_seed, blocks_until_change, edge = validator_problem_window(s, subtensor, chain_head)
                 if last_problem_seed != problem_seed:
-                    await ep.run_epoch(s, source, dry_run=self.dry_run)
+                    await ep.run_epoch(s, dry_run=self.dry_run)
                     last_problem_seed = problem_seed
                     await asyncio.sleep(2)
                     continue
@@ -177,35 +104,7 @@ class ValidatorService:
                 await asyncio.sleep(wait_s)
 
     def run_blocking(self) -> None:
-        import click
-
-        from lemma.cli.style import finish_cli_output, stylize
-
-        click.echo(
-            stylize(
-                "Validator running — press Ctrl+C to stop and return to your shell.",
-                fg="cyan",
-                bold=True,
-            ),
-            err=True,
-        )
         try:
             asyncio.run(self.run_forever())
         except KeyboardInterrupt:
-            click.echo("")
-            click.echo(
-                stylize("Validator stopped (Ctrl+C).", fg="yellow", bold=True),
-                err=True,
-            )
-        finally:
-            finish_cli_output()
-
-
-def wait_until_epoch(subtensor: bt.Subtensor, netuid: int, max_sleep: float = 7200.0) -> None:
-    """Sleep until subnet epoch boundary (simple polling)."""
-    t0 = time.monotonic()
-    while time.monotonic() - t0 < max_sleep:
-        bu = subtensor.blocks_until_next_epoch(netuid)
-        if bu is not None and bu <= 1:
-            return
-        time.sleep(min(12.0, float(bu or 1) * 12.0))
+            logger.info("Validator stopped (Ctrl+C).")
