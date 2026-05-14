@@ -200,6 +200,7 @@ class LeanSandbox:
             "set -euo pipefail",
             "if [ -d /opt/lemma-stub ] && [ ! -d .lake ]; then",
             "  cp -a /opt/lemma-stub/.lake . 2>/dev/null || true",
+            "  cp -a /opt/lemma-stub/lake-manifest.json . 2>/dev/null || true",
             "fi",
         ]
         if lake_exe_cache_get_needed(work):
