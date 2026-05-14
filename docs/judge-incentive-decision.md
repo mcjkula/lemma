@@ -1,3 +1,5 @@
+> **Status:** superseded by the redesign — this document describes mechanisms removed in the Stage-0 cut and is kept only for commit-history context.
+
 # Proof Verification Reward Boundary
 
 Lemma's live reward objective is proof verification: a submitted proof must pass

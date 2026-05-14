@@ -1,3 +1,5 @@
+> **Status:** superseded by the redesign — this document describes mechanisms removed in the Stage-0 cut and is kept only for commit-history context.
+
 # Validator Profile Peer Attest Threat Model
 
 `LEMMA_VALIDATOR_PROFILE_ATTEST_ENABLED=1` makes a validator fetch each configured

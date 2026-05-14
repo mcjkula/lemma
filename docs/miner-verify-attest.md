@@ -1,3 +1,5 @@
+> **Status:** superseded by the redesign — this document describes mechanisms removed in the Stage-0 cut and is kept only for commit-history context.
+
 # Miner Verify Attest Threat Model
 
 `LEMMA_MINER_VERIFY_ATTEST_ENABLED=1` lets a miner sign a statement that it ran

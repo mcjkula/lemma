@@ -1,3 +1,5 @@
+> **Status:** superseded by the redesign — this document describes mechanisms removed in the Stage-0 cut and is kept only for commit-history context.
+
 # Incentive layer hard-migration
 
 This document tracks **post-audit** mechanism changes in Lemma: proof-centric
