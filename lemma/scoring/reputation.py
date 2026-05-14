@@ -23,23 +23,17 @@ class ReputationStore:
 
     @classmethod
     def from_json(cls, data: dict[str, Any]) -> ReputationStore:
-        ver = int(data.get("version", 3))
-        raw = data.get("rolling_score_by_uid") or {}
         rolling: dict[int, float] = {}
+        raw = data.get("rolling_score_by_uid") or {}
         if isinstance(raw, dict):
             for k, v in raw.items():
                 rolling[int(k)] = _clamp_score(float(v))
-        if not rolling:
-            legacy = data.get("ema_by_uid") or {}
-            if isinstance(legacy, dict):
-                for k, v in legacy.items():
-                    rolling[int(k)] = _clamp_score(float(v))
-        reign_raw = data.get("reign_by_uid") or {}
         reign: dict[int, int] = {}
+        reign_raw = data.get("reign_by_uid") or {}
         if isinstance(reign_raw, dict):
             for k, v in reign_raw.items():
                 reign[int(k)] = int(v)
-        return cls(rolling_score_by_uid=rolling, reign_by_uid=reign, version=max(4, ver))
+        return cls(rolling_score_by_uid=rolling, reign_by_uid=reign)
 
 
 def default_reputation_path() -> Path:
@@ -52,11 +46,11 @@ def load_reputation(path: Path | None) -> ReputationStore:
         return ReputationStore()
     try:
         data = json.loads(p.read_text(encoding="utf-8"))
-        if not isinstance(data, dict):
-            return ReputationStore()
-        return ReputationStore.from_json(data)
-    except (OSError, ValueError, json.JSONDecodeError, TypeError, KeyError):
+    except (OSError, ValueError, json.JSONDecodeError):
         return ReputationStore()
+    if not isinstance(data, dict):
+        return ReputationStore()
+    return ReputationStore.from_json(data)
 
 
 def save_reputation(path: Path | None, store: ReputationStore) -> None:
@@ -72,8 +66,7 @@ def rolling_effective_alpha(alpha: float, difficulty_weight: float) -> float:
     w = max(0.0, float(difficulty_weight))
     if a <= 0.0 or w <= 0.0:
         return 0.0
-    eff = 1.0 - ((1.0 - a) ** w)
-    return max(0.0, min(1.0, float(eff)))
+    return max(0.0, min(1.0, 1.0 - ((1.0 - a) ** w)))
 
 
 def apply_rolling_outcomes(

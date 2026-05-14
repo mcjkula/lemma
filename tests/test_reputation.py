@@ -48,8 +48,7 @@ def test_reputation_roundtrip(tmp_path: Path) -> None:
     assert loaded.rolling_score_by_uid == {2: 0.75}
 
 
-def test_legacy_reputation_state_migrates(tmp_path: Path) -> None:
-    p = tmp_path / "rep.json"
-    p.write_text('{"version": 2, "ema_by_uid": {"1": 0.4, "2": 1.2}}', encoding="utf-8")
-    s = load_reputation(p)
-    assert s.rolling_score_by_uid == {1: 0.4, 2: 1.0}
+def test_load_missing_file_returns_empty(tmp_path: Path) -> None:
+    s = load_reputation(tmp_path / "missing.json")
+    assert s.rolling_score_by_uid == {}
+    assert s.reign_by_uid == {}

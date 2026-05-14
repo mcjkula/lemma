@@ -3,7 +3,6 @@ from lemma.common.problem_seed import (
     blocks_until_quantize_boundary,
     effective_chain_head_for_problem_seed,
     first_block_of_next_seed_window,
-    format_next_theorem_countdown,
     mix_sub_problem_seed,
     problem_sample_seed_block,
     resolve_problem_seed,
@@ -97,16 +96,6 @@ def test_first_block_of_next_seed_window() -> None:
     assert first_block_of_next_seed_window(100, 100) == 200
     assert first_block_of_next_seed_window(199, 100) == 200
     assert first_block_of_next_seed_window(200, 100) == 300
-
-
-def test_format_next_theorem_countdown_mentions_next_block() -> None:
-    line = format_next_theorem_countdown(
-        chain_head_block=150,
-        blocks_until_theorem_changes=50,
-        seconds_per_block=12.0,
-    )
-    assert "200" in line
-    assert "50" in line
 
 
 def test_blocks_until_quantize_boundary() -> None:
