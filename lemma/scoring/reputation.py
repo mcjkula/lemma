@@ -11,12 +11,14 @@ from typing import Any
 @dataclass
 class ReputationStore:
     rolling_score_by_uid: dict[int, float] = field(default_factory=dict)
+    reign_by_uid: dict[int, int] = field(default_factory=dict)
     version: int = 4
 
     def to_json(self) -> dict[str, Any]:
         return {
             "version": self.version,
             "rolling_score_by_uid": {str(k): v for k, v in sorted(self.rolling_score_by_uid.items())},
+            "reign_by_uid": {str(k): int(v) for k, v in sorted(self.reign_by_uid.items())},
         }
 
     @classmethod
@@ -27,13 +29,17 @@ class ReputationStore:
         if isinstance(raw, dict):
             for k, v in raw.items():
                 rolling[int(k)] = _clamp_score(float(v))
-        # v2/v3 stored only an EMA map; migrate it to a rolling score.
         if not rolling:
             legacy = data.get("ema_by_uid") or {}
             if isinstance(legacy, dict):
                 for k, v in legacy.items():
                     rolling[int(k)] = _clamp_score(float(v))
-        return cls(rolling_score_by_uid=rolling, version=max(4, ver))
+        reign_raw = data.get("reign_by_uid") or {}
+        reign: dict[int, int] = {}
+        if isinstance(reign_raw, dict):
+            for k, v in reign_raw.items():
+                reign[int(k)] = int(v)
+        return cls(rolling_score_by_uid=rolling, reign_by_uid=reign, version=max(4, ver))
 
 
 def default_reputation_path() -> Path:

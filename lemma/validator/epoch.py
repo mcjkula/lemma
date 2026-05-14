@@ -1,4 +1,4 @@
-"""One scoring round over Epistula-signed HTTP."""
+"""One scoring round: broadcast K theorems, rank first-to-solve, set weights."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ import bittensor as bt
 import httpx
 from loguru import logger
 
-from lemma.common.block_deadline import compute_forward_deadline_and_wait
 from lemma.common.problem_seed import (
     effective_chain_head_for_problem_seed,
+    mix_sub_problem_seed,
     resolve_problem_seed,
 )
 from lemma.common.subtensor import get_subtensor
@@ -20,13 +20,14 @@ from lemma.lean.sandbox import VerifyResult
 from lemma.lean.verify_runner import run_lean_verify
 from lemma.problems.base import Problem, ProblemSource
 from lemma.protocol import ChallengePayload, RevealPayload
-from lemma.scoring.reputation import (
-    apply_rolling_outcomes,
-    load_reputation,
-    rolling_weights,
-    save_reputation,
-)
+from lemma.scoring.champion_decay import apply_decay
+from lemma.scoring.dedup import submission_fingerprint
+from lemma.scoring.first_to_solve import Solve, rank_solvers
+from lemma.scoring.observed_difficulty import base_reward, solve_fractions
+from lemma.scoring.pareto_subset import layer_weights, pareto_layers
+from lemma.scoring.reputation import load_reputation, save_reputation
 from lemma.transport.client import signed_post
+from lemma.validator.corpus import CorpusEntry, append as append_corpus
 from lemma.validator.weights_policy import build_full_weights
 
 if TYPE_CHECKING:
@@ -34,6 +35,8 @@ if TYPE_CHECKING:
 
 
 _VERIFY_INFRA_REASONS = frozenset({"timeout", "oom", "docker_error", "remote_error"})
+_RANK_DECAY: float = 0.5
+_MAX_RANK_PAID: int = 10
 
 
 def _verify_result_is_infra_failure(vr: VerifyResult) -> bool:
@@ -52,17 +55,20 @@ def _miner_url(metagraph: bt.metagraph, uid: int) -> str | None:
     return f"http://{ip}:{port}"
 
 
-def _difficulty_weight(settings: LemmaSettings, split: str) -> float:
-    key = (split or "easy").lower()
-    return {
-        "easy": settings.lemma_scoring_difficulty_easy,
-        "medium": settings.lemma_scoring_difficulty_medium,
-        "hard": settings.lemma_scoring_difficulty_hard,
-        "extreme": settings.lemma_scoring_difficulty_extreme,
-    }.get(key, 1.0)
+def _registration_blocks(metagraph: bt.metagraph) -> dict[int, int]:
+    out: dict[int, int] = {}
+    blocks = getattr(metagraph, "block_at_registration", None)
+    if blocks is None:
+        return out
+    for uid in range(metagraph.n):
+        try:
+            out[uid] = int(blocks[uid])
+        except (IndexError, TypeError, ValueError):
+            continue
+    return out
 
 
-async def _query_one_miner(
+async def _query_one(
     *,
     client: httpx.AsyncClient,
     url: str,
@@ -84,17 +90,16 @@ async def _query_one_miner(
         logger.debug("miner http error: {}", e)
         return None
     if r.status_code != 200:
-        logger.debug("miner http {}: {}", r.status_code, (r.text or "")[:200])
         return None
     try:
         return RevealPayload.model_validate_json(r.content)
-    except (ValueError, TypeError) as e:
-        logger.debug("miner response parse error: {}", e)
+    except (ValueError, TypeError):
         return None
 
 
-async def _broadcast(
+async def _broadcast_theorem(
     *,
+    client: httpx.AsyncClient,
     settings: LemmaSettings,
     wallet: bt.Wallet,
     metagraph: bt.metagraph,
@@ -110,7 +115,7 @@ async def _broadcast(
             return uid, None
         receiver_ss58 = metagraph.hotkeys[uid]
         async with sem:
-            reply = await _query_one_miner(
+            reply = await _query_one(
                 client=client,
                 url=url,
                 keypair=wallet.hotkey,
@@ -120,20 +125,15 @@ async def _broadcast(
             )
         return uid, reply
 
+    results = await asyncio.gather(*(_one(uid) for uid in range(metagraph.n)))
     out: dict[int, RevealPayload] = {}
-    async with httpx.AsyncClient() as client:
-        results = await asyncio.gather(*(_one(uid) for uid in range(metagraph.n)))
     for uid, reply in results:
         if reply is not None and reply.proof_script:
             out[uid] = reply
     return out
 
 
-def _verify_proof(
-    settings: LemmaSettings,
-    problem: Problem,
-    proof_script: str,
-) -> VerifyResult:
+def _verify_proof(settings: LemmaSettings, problem: Problem, proof_script: str) -> VerifyResult:
     try:
         return run_lean_verify(
             settings,
@@ -145,13 +145,81 @@ def _verify_proof(
         return VerifyResult(passed=False, reason="docker_error", stderr_tail=str(e)[:8000])
 
 
+def _problems_for_epoch(source: ProblemSource, problem_seed: int, k: int) -> list[Problem]:
+    return [source.sample(seed=mix_sub_problem_seed(problem_seed, i)) for i in range(max(1, k))]
+
+
+def _verified_solves(
+    settings: LemmaSettings,
+    problems: dict[str, Problem],
+    replies_by_theorem: dict[str, dict[int, RevealPayload]],
+    commit_block: int,
+) -> tuple[dict[str, set[int]], dict[str, dict[int, str]]]:
+    """Return (solved_uids_by_theorem, proofs_by_theorem_uid)."""
+    solved: dict[str, set[int]] = {tid: set() for tid in problems}
+    proofs: dict[str, dict[int, str]] = {tid: {} for tid in problems}
+    seen_fingerprints: dict[str, set[str]] = {tid: set() for tid in problems}
+    for tid, replies in replies_by_theorem.items():
+        problem = problems[tid]
+        for uid, reply in replies.items():
+            fp = submission_fingerprint(problem.challenge_source(), reply.proof_script)
+            if fp in seen_fingerprints[tid]:
+                continue
+            vr = _verify_proof(settings, problem, reply.proof_script)
+            if _verify_result_is_infra_failure(vr):
+                continue
+            if not vr.passed:
+                continue
+            seen_fingerprints[tid].add(fp)
+            solved[tid].add(uid)
+            proofs[tid][uid] = reply.proof_script
+    return solved, proofs
+
+
+def _compose_weights(
+    solved_by_theorem: dict[str, set[int]],
+    active_uids: set[int],
+    registration_block: dict[int, int],
+    commit_block: int,
+    reign_by_uid: dict[int, int],
+) -> dict[int, float]:
+    fractions = solve_fractions(solved_by_theorem, active_uids)
+    solves = [
+        Solve(miner_uid=uid, theorem_id=tid, commit_block=commit_block)
+        for tid, uids in solved_by_theorem.items()
+        for uid in uids
+    ]
+    ranks = rank_solvers(solves, registration_block)
+    rewards: dict[int, dict[str, float]] = {}
+    for tid, uids in solved_by_theorem.items():
+        r0 = base_reward(fractions.get(tid, 0.0))
+        if r0 <= 0.0:
+            continue
+        for uid in uids:
+            rank = ranks.get((tid, uid), _MAX_RANK_PAID)
+            if rank >= _MAX_RANK_PAID:
+                continue
+            rewards.setdefault(uid, {})[tid] = r0 * (_RANK_DECAY**rank)
+    if not rewards:
+        return {}
+    layers = pareto_layers(rewards)
+    weights = layer_weights(layers)
+    return apply_decay(weights, reign_by_uid)
+
+
+def _update_reigns(reign_by_uid: dict[int, int], champions: list[int]) -> dict[int, int]:
+    fresh: dict[int, int] = {}
+    for uid in champions:
+        fresh[uid] = int(reign_by_uid.get(uid, 0)) + 1
+    return fresh
+
+
 async def run_epoch(
     settings: LemmaSettings,
     source: ProblemSource,
     *,
     dry_run: bool = False,
 ) -> dict[int, float]:
-    """Single epoch: broadcast, verify, update rolling scores, set_weights."""
     t0 = time.perf_counter()
     wallet = bt.Wallet(name=settings.wallet_cold, hotkey=settings.wallet_hot)
     subtensor = get_subtensor(settings)
@@ -160,62 +228,53 @@ async def run_epoch(
     seed_head = effective_chain_head_for_problem_seed(
         cur_block, int(settings.lemma_problem_seed_chain_head_slack_blocks or 0),
     )
-    problem_seed, seed_tag = resolve_problem_seed(
+    problem_seed, _seed_tag = resolve_problem_seed(
         chain_head_block=seed_head,
         netuid=settings.netuid,
         mode=settings.problem_seed_mode,
         quantize_blocks=settings.problem_seed_quantize_blocks,
         subtensor=subtensor,
     )
-    deadline_block, forward_wait_s = compute_forward_deadline_and_wait(
-        settings=settings,
-        subtensor=subtensor,
-        cur_block=seed_head,
-        seed_tag=seed_tag,
-    )
-    problem = source.sample(seed=problem_seed)
-    challenge = ChallengePayload(
-        theorem_id=problem.id,
-        theorem_statement=problem.challenge_source(),
-        imports=list(problem.imports),
-        lean_toolchain=problem.lean_toolchain,
-        mathlib_rev=problem.mathlib_rev,
-        deadline_block=int(deadline_block),
-        metronome_id=str(problem_seed),
-    )
+    k = max(1, int(settings.lemma_epoch_problem_count))
+    problems_list = _problems_for_epoch(source, problem_seed, k)
+    problems = {p.id: p for p in problems_list}
 
-    replies = await _broadcast(
-        settings=settings,
-        wallet=wallet,
-        metagraph=metagraph,
-        challenge=challenge,
-        timeout_s=forward_wait_s,
-    )
+    replies_by_theorem: dict[str, dict[int, RevealPayload]] = {}
+    async with httpx.AsyncClient() as client:
+        for problem in problems_list:
+            challenge = ChallengePayload(
+                theorem_id=problem.id,
+                theorem_statement=problem.challenge_source(),
+                imports=list(problem.imports),
+                lean_toolchain=problem.lean_toolchain,
+                mathlib_rev=problem.mathlib_rev,
+                deadline_block=cur_block + 1,
+                metronome_id=str(problem_seed),
+            )
+            replies_by_theorem[problem.id] = await _broadcast_theorem(
+                client=client,
+                settings=settings,
+                wallet=wallet,
+                metagraph=metagraph,
+                challenge=challenge,
+                timeout_s=float(settings.forward_wait_max_s),
+            )
+
+    solved, proofs = _verified_solves(settings, problems, replies_by_theorem, cur_block)
 
     rep_store = load_reputation(settings.lemma_reputation_state_path)
-    outcomes: dict[int, bool] = {}
-    for uid in range(metagraph.n):
-        reply = replies.get(uid)
-        if reply is None:
-            outcomes[uid] = False
-            continue
-        vr = _verify_proof(settings, problem, reply.proof_script)
-        if _verify_result_is_infra_failure(vr):
-            continue
-        outcomes[uid] = bool(vr.passed)
-
-    apply_rolling_outcomes(
-        rep_store.rolling_score_by_uid,
-        outcomes,
-        alpha=settings.lemma_scoring_rolling_alpha,
-        difficulty_weight=_difficulty_weight(settings, problem.split),
+    weights = _compose_weights(
+        solved_by_theorem=solved,
+        active_uids=set(range(metagraph.n)),
+        registration_block=_registration_blocks(metagraph),
+        commit_block=cur_block,
+        reign_by_uid=rep_store.reign_by_uid,
     )
+    champions = [uid for uid, w in weights.items() if w > 0.0]
+    rep_store.reign_by_uid = _update_reigns(rep_store.reign_by_uid, champions)
     if not dry_run:
         save_reputation(settings.lemma_reputation_state_path, rep_store)
 
-    weights = rolling_weights(
-        {uid: rep_store.rolling_score_by_uid.get(uid, 0.0) for uid in range(metagraph.n)},
-    )
     full, skip = build_full_weights(
         metagraph.n,
         weights,
@@ -231,11 +290,27 @@ async def run_epoch(
             wait_for_inclusion=False,
         )
 
+    if not dry_run:
+        corpus_entries = [
+            CorpusEntry(
+                epoch_id=problem_seed,
+                theorem_id=tid,
+                theorem_statement=problems[tid].challenge_source(),
+                proof_script=proof,
+                miner_hotkey_ss58=metagraph.hotkeys[uid],
+                commit_block=cur_block,
+                mathlib_rev=problems[tid].mathlib_rev,
+                lean_toolchain=problems[tid].lean_toolchain,
+            )
+            for tid, by_uid in proofs.items()
+            for uid, proof in by_uid.items()
+        ]
+        append_corpus(corpus_entries)
+
     logger.info(
-        "epoch theorem={} seed={} verified={} weights={} skip={} elapsed={:.2f}s",
-        problem.id,
-        problem_seed,
-        sum(1 for v in outcomes.values() if v),
+        "epoch theorems={} solved={} weights={} skip={} elapsed={:.2f}s",
+        len(problems),
+        sum(len(v) for v in solved.values()),
         len(weights),
         skip,
         time.perf_counter() - t0,
