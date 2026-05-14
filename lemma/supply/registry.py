@@ -1,11 +1,14 @@
-"""Per-epoch theorem-batch Merkle root, optionally posted via set_commitment."""
+"""Merkle root over per-epoch theorem statements.
+
+The chain stamp itself goes through ``lemma.transport.chain_commit.anchor_batch``;
+this module only computes the root and carries the (epoch_id, root_hex) pair.
+"""
 
 from __future__ import annotations
 
 import hashlib
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any
 
 
 def _leaf_hash(text: str) -> bytes:
@@ -32,23 +35,3 @@ def merkle_root(statement_hashes: Iterable[str]) -> str:
 class EpochCommitment:
     epoch_id: int
     root_hex: str
-
-
-def commit_to_chain(
-    subtensor: Any,
-    *,
-    wallet: Any,
-    netuid: int,
-    epoch_id: int,
-    root_hex: str,
-) -> EpochCommitment:
-    """Post (epoch_id, root_hex) to chain via the generic commitment slot.
-
-    Falls back to a no-op when the subtensor object lacks ``set_commitment``; callers may
-    persist commitments locally for testnet bootstrap.
-    """
-    payload = f"lemma-supply:{epoch_id}:{root_hex}".encode()
-    set_commitment = getattr(subtensor, "set_commitment", None)
-    if callable(set_commitment):
-        set_commitment(wallet=wallet, netuid=netuid, data=payload)
-    return EpochCommitment(epoch_id=epoch_id, root_hex=root_hex)
