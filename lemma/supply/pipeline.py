@@ -11,7 +11,7 @@ from lemma.problems.base import Problem
 from lemma.supply.base import Source
 from lemma.supply.baseline_filter import is_trivial
 from lemma.supply.freshness import FreshnessRegistry, statement_hash
-from lemma.supply.registry import EpochCommitment, commit_to_chain, merkle_root
+from lemma.supply.registry import EpochCommitment, merkle_root
 
 if TYPE_CHECKING:
     from lemma.common.config import LemmaSettings
@@ -85,17 +85,3 @@ def build_batch(
     )
 
 
-def commit_batch(
-    batch: SupplyBatch,
-    subtensor: object,
-    *,
-    wallet: object,
-    netuid: int,
-) -> EpochCommitment:
-    return commit_to_chain(
-        subtensor,
-        wallet=wallet,
-        netuid=netuid,
-        epoch_id=batch.epoch_id,
-        root_hex=batch.commitment.root_hex,
-    )
