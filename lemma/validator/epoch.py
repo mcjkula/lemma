@@ -1,4 +1,4 @@
-"""One scoring round: broadcast theorems, compute the earned/burn budget, set weights."""
+"""One scoring round: broadcast theorems, compute the budget, set weights."""
 
 from __future__ import annotations
 
@@ -24,11 +24,6 @@ if TYPE_CHECKING:
     from lemma.common.config import LemmaSettings
 
 
-def _registration_blocks(metagraph: bittensor.Metagraph) -> dict[int, int]:
-    blocks = metagraph.block_at_registration
-    return {uid: int(blocks[uid]) for uid in range(metagraph.n.item())}
-
-
 async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[int, float]:
     t0 = time.perf_counter()
     wallet = bittensor.Wallet(name=settings.wallet_cold, hotkey=settings.wallet_hot)
@@ -36,21 +31,21 @@ async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[i
     metagraph = subtensor.metagraph(settings.netuid)
     n = metagraph.n.item()
     cur_block = int(subtensor.get_current_block())
-    problem_seed, _tag = resolve_problem_seed(
+    problem_seed, _ = resolve_problem_seed(
         chain_head_block=effective_chain_head_for_problem_seed(
-            cur_block, int(settings.lemma_problem_seed_chain_head_slack_blocks or 0),
+            cur_block, settings.lemma_problem_seed_chain_head_slack_blocks,
         ),
         netuid=settings.netuid, mode=settings.problem_seed_mode,
         quantize_blocks=settings.problem_seed_quantize_blocks, subtensor=subtensor,
     )
-    k = max(1, int(settings.lemma_epoch_problem_count))
+    k = max(1, settings.lemma_epoch_problem_count)
     problems_list, anchored_block = build_problems_for_epoch(
         settings, epoch_id=problem_seed, target_count=k, subtensor=subtensor, wallet=wallet,
     )
     if not problems_list and settings.lemma_supply_fallback_generated:
         from lemma.problems.generated import FallbackGeneratedSource
 
-        problems_list = FallbackGeneratedSource().draw(problem_seed, k, str(problem_seed).encode("utf-8"))
+        problems_list = FallbackGeneratedSource().draw(problem_seed, k, str(problem_seed).encode())
         anchored_block = cur_block
     commit_block = anchored_block or cur_block
     problems = {p.id: p for p in problems_list}
@@ -76,31 +71,27 @@ async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[i
     miner_weights, burn_share = compute_budget(
         solved,
         active_uids=set(range(n)),
-        registration_block=_registration_blocks(metagraph),
+        registration_block={uid: int(metagraph.block_at_registration[uid]) for uid in range(n)},
         commit_block=commit_block,
         reign_by_uid=rep_store.reign_by_uid,
     )
     rep_store.reign_by_uid = {
-        uid: int(rep_store.reign_by_uid.get(uid, 0)) + 1
+        uid: rep_store.reign_by_uid.get(uid, 0) + 1
         for uid, w in miner_weights.items() if w > 0.0
     }
     if not dry_run:
         save_reputation(settings.lemma_reputation_state_path, rep_store)
 
-    burn_uid = resolve_burn_uid(metagraph)
-    full = build_full_weights(n, miner_weights, burn_share=burn_share, burn_uid=burn_uid)
+    full = build_full_weights(n, miner_weights, burn_share=burn_share, burn_uid=resolve_burn_uid(metagraph))
     if not dry_run:
-        # ``wait_for_inclusion=False`` returns the commit response only — when the subnet
-        # has commit-reveal enabled, the SDK enters ``commit_timelocked_weights_extrinsic``
-        # and the reveal lands automatically at the next reveal block. We don't await the
-        # reveal because the validator loop has already moved on by then.
+        # wait_for_inclusion=False: the commit response is returned; the reveal lands later
+        # automatically when the subnet has commit-reveal enabled.
         response = subtensor.set_weights(
             wallet=wallet, netuid=settings.netuid, uids=list(range(n)),
             weights=full, wait_for_inclusion=False,
         )
         if not response.success:
-            logger.warning("set_weights returned failure: {}", response.message)
-    if not dry_run:
+            logger.warning("set_weights failed: {}", response.message)
         append_corpus([
             CorpusEntry(
                 epoch_id=problem_seed, theorem_id=tid,
@@ -113,7 +104,6 @@ async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[i
     logger.info(
         "epoch theorems={} solved={} earned={:.3f} burn={:.3f} miners_paid={} elapsed={:.2f}s",
         len(problems), sum(len(v) for v in solved.values()),
-        1.0 - burn_share, burn_share, len(miner_weights),
-        time.perf_counter() - t0,
+        1.0 - burn_share, burn_share, len(miner_weights), time.perf_counter() - t0,
     )
     return miner_weights

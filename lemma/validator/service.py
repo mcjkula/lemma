@@ -18,28 +18,27 @@ from lemma.common.problem_seed import (
 )
 from lemma.common.subtensor import get_subtensor
 
-_DOCKER_REQUIRED = "lemma validator requires Docker for Lean verify (LEMMA_USE_DOCKER=true)."
-
 
 def epoch_sleep_seconds(blocks_until_epoch: int, block_time_sec_estimate: float) -> float:
-    bu = int(blocks_until_epoch)
-    if bu <= 1:
+    if blocks_until_epoch <= 1:
         return 0.0
-    if bu <= 3:
+    if blocks_until_epoch <= 3:
         return 1.0
-    return min(12.0, max(1.0, float(bu) * float(block_time_sec_estimate) * 0.25))
+    return min(12.0, max(1.0, blocks_until_epoch * block_time_sec_estimate * 0.25))
 
 
 def validator_retry_sleep_seconds(exc: BaseException, block_time_sec_estimate: float) -> float:
     msg = str(exc).lower()
     if "429" in msg or "rate limit" in msg or "too many requests" in msg:
-        return min(300.0, max(30.0, float(block_time_sec_estimate) * 5.0))
+        return min(300.0, max(30.0, block_time_sec_estimate * 5.0))
     return 2.0
 
 
-def validator_problem_window(settings: LemmaSettings, subtensor: bittensor.Subtensor, chain_head_block: int) -> tuple[int, int, str]:
+def validator_problem_window(
+    settings: LemmaSettings, subtensor: bittensor.Subtensor, chain_head_block: int,
+) -> tuple[int, int, str]:
     seed_head = effective_chain_head_for_problem_seed(
-        int(chain_head_block), int(settings.lemma_problem_seed_chain_head_slack_blocks or 0),
+        chain_head_block, settings.lemma_problem_seed_chain_head_slack_blocks,
     )
     seed, tag = resolve_problem_seed(
         chain_head_block=seed_head, netuid=settings.netuid, mode=settings.problem_seed_mode,
@@ -49,13 +48,13 @@ def validator_problem_window(settings: LemmaSettings, subtensor: bittensor.Subte
         chain_head_block=seed_head, netuid=settings.netuid, mode=settings.problem_seed_mode,
         quantize_blocks=settings.problem_seed_quantize_blocks, seed_tag=tag, subtensor=subtensor,
     )
-    return int(seed), int(blocks), edge
+    return seed, blocks, edge
 
 
 def validator_startup_issues(settings: LemmaSettings) -> list[str]:
     fatal: list[str] = []
     if not settings.lean_use_docker:
-        fatal.append(_DOCKER_REQUIRED)
+        fatal.append("lemma validator requires Docker for Lean verify (LEMMA_USE_DOCKER=true).")
     if settings.lemma_transport != "http":
         fatal.append(f"LEMMA_TRANSPORT={settings.lemma_transport!r} unsupported — set LEMMA_TRANSPORT=http.")
     if settings.lemma_scoring_mode != "pareto":
@@ -70,9 +69,9 @@ class ValidatorService:
 
     async def run_forever(self) -> None:
         setup_logging(self.settings.log_level)
-        logger.info("Validator running — press Ctrl+C to stop and return to your shell.")
+        logger.info("Validator running — press Ctrl+C to stop.")
         s = self.settings
-        fatal = await asyncio.to_thread(validator_startup_issues, s)
+        fatal = validator_startup_issues(s)
         if fatal:
             raise SystemExit(fatal[0])
         subtensor = get_subtensor(s)
@@ -99,12 +98,10 @@ class ValidatorService:
 
         from lemma.cli.style import finish_cli_output, stylize
 
-        click.echo(stylize("Validator running — press Ctrl+C to stop and return to your shell.",
-                           fg="cyan", bold=True), err=True)
+        click.echo(stylize("Validator running — press Ctrl+C to stop.", fg="cyan", bold=True), err=True)
         try:
             asyncio.run(self.run_forever())
         except KeyboardInterrupt:
-            click.echo("")
-            click.echo(stylize("Validator stopped (Ctrl+C).", fg="yellow", bold=True), err=True)
+            click.echo(stylize("\nValidator stopped (Ctrl+C).", fg="yellow", bold=True), err=True)
         finally:
             finish_cli_output()

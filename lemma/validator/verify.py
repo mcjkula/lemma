@@ -13,8 +13,6 @@ from lemma.scoring.dedup import submission_fingerprint
 if TYPE_CHECKING:
     from lemma.common.config import LemmaSettings
 
-_INFRA_REASONS = frozenset({"timeout", "oom", "docker_error", "remote_error"})
-
 
 def _verify(settings: LemmaSettings, problem: Problem, proof_script: str) -> VerifyResult:
     try:
@@ -31,7 +29,6 @@ def verified_solves(
     problems: dict[str, Problem],
     replies_by_theorem: dict[str, dict[int, RevealPayload]],
 ) -> tuple[dict[str, set[int]], dict[str, dict[int, str]]]:
-    """Run Lean verify per reveal, drop duplicate fingerprints and infra failures."""
     solved: dict[str, set[int]] = {tid: set() for tid in problems}
     proofs: dict[str, dict[int, str]] = {tid: {} for tid in problems}
     seen: dict[str, set[str]] = {tid: set() for tid in problems}
@@ -41,10 +38,7 @@ def verified_solves(
             fp = submission_fingerprint(problem.challenge_source(), reply.proof_script)
             if fp in seen[tid]:
                 continue
-            vr = _verify(settings, problem, reply.proof_script)
-            if not vr.passed:
-                continue  # both compile_error and infra failures are dropped
-            if vr.reason in _INFRA_REASONS:
+            if not _verify(settings, problem, reply.proof_script).passed:
                 continue
             seen[tid].add(fp)
             solved[tid].add(uid)
