@@ -1,8 +1,8 @@
 """Anti-monopoly reign decay (Affine pattern, daily 0.33% default).
 
-A miner that tops the Pareto front for K consecutive epochs has its share
-multiplied by ``(1 - decay_per_epoch) ** max(0, K - 1)``. The freshness signal
-keeps champions earning while leaving headroom for new arrivals.
+A miner that tops the budget for K consecutive epochs has its raw earned share
+multiplied by ``(1 - decay_per_epoch) ** max(0, K - 1)``. Decay is applied at the
+budget layer (``lemma.scoring.budget``); this module is the pure multiplier.
 """
 
 from __future__ import annotations
@@ -22,12 +22,9 @@ def apply_decay(
     *,
     decay_per_epoch: float = DEFAULT_DECAY_PER_EPOCH,
 ) -> dict[int, float]:
-    """Multiply each weight by its UID's reign factor and renormalize."""
+    """Multiply each weight by its UID's reign factor (no renormalisation)."""
     out = {
-        uid: max(0.0, w) * reign_factor(reign_by_uid.get(uid, 0), decay_per_epoch=decay_per_epoch)
+        uid: max(0.0, float(w)) * reign_factor(reign_by_uid.get(uid, 0), decay_per_epoch=decay_per_epoch)
         for uid, w in weights.items()
     }
-    total = sum(out.values())
-    if total <= 0.0:
-        return {}
-    return {uid: v / total for uid, v in out.items()}
+    return {uid: w for uid, w in out.items() if w > 0.0}
