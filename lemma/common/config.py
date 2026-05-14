@@ -247,6 +247,18 @@ class LemmaSettings(BaseSettings):
     lemma_commit_reveal_enabled: bool = Field(
         default=False, validation_alias="LEMMA_COMMIT_REVEAL_ENABLED",
     )
+    lemma_supply_pipeline_enabled: bool = Field(
+        default=False, validation_alias="LEMMA_SUPPLY_PIPELINE_ENABLED",
+    )
+    lemma_mathlib_root_path: Path | None = Field(
+        default=None, validation_alias="LEMMA_MATHLIB_ROOT_PATH",
+    )
+    lemma_competition_formal_path: Path | None = Field(
+        default=None, validation_alias="LEMMA_COMPETITION_FORMAL_PATH",
+    )
+    lemma_supply_freshness_path: Path | None = Field(
+        default=None, validation_alias="LEMMA_SUPPLY_FRESHNESS_PATH",
+    )
 
     miner_min_validator_stake: float = Field(
         default=0.0, ge=0.0, validation_alias="MINER_MIN_VALIDATOR_STAKE",

@@ -110,7 +110,7 @@ class PerturbedMathlibSource:
         out: list[Problem] = []
         for i in range(max(0, int(count))):
             tpl = _TEMPLATES[rng.randrange(len(_TEMPLATES))]
-            type_expr, _hint = tpl.render(rng)
+            type_expr, _name_hint = tpl.render(rng)
             theorem_name = _name(tpl.family, epoch_id, i)
             out.append(
                 Problem(

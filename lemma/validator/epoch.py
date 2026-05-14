@@ -26,6 +26,10 @@ from lemma.scoring.first_to_solve import Solve, rank_solvers
 from lemma.scoring.observed_difficulty import base_reward, solve_fractions
 from lemma.scoring.pareto_subset import layer_weights, pareto_layers
 from lemma.scoring.reputation import load_reputation, save_reputation
+from lemma.supply.competition_formal import CompetitionFormalSource
+from lemma.supply.mathlib_sorrys import MathlibSorrysSource
+from lemma.supply.perturb_mathlib import PerturbedMathlibSource
+from lemma.supply.pipeline import build_batch, commit_batch
 from lemma.transport.client import signed_post
 from lemma.validator.corpus import CorpusEntry, append as append_corpus
 from lemma.validator.weights_policy import build_full_weights
@@ -149,6 +153,47 @@ def _problems_for_epoch(source: ProblemSource, problem_seed: int, k: int) -> lis
     return [source.sample(seed=mix_sub_problem_seed(problem_seed, i)) for i in range(max(1, k))]
 
 
+def _supply_pipeline_problems(
+    settings: LemmaSettings,
+    *,
+    epoch_id: int,
+    target_count: int,
+    subtensor: object,
+    wallet: object,
+) -> list[Problem]:
+    """Build the per-epoch batch from streams P/M/C and commit the Merkle root."""
+    from lemma.catalog.constants import DEFAULT_LEAN_TOOLCHAIN, DEFAULT_MATHLIB_REV
+
+    streams: dict[str, object] = {
+        "P": PerturbedMathlibSource(
+            lean_toolchain=DEFAULT_LEAN_TOOLCHAIN,
+            mathlib_rev=DEFAULT_MATHLIB_REV,
+        ),
+    }
+    if settings.lemma_mathlib_root_path is not None:
+        streams["M"] = MathlibSorrysSource(
+            settings.lemma_mathlib_root_path,
+            lean_toolchain=DEFAULT_LEAN_TOOLCHAIN,
+            mathlib_rev=DEFAULT_MATHLIB_REV,
+        )
+    if settings.lemma_competition_formal_path is not None:
+        streams["C"] = CompetitionFormalSource(
+            settings.lemma_competition_formal_path,
+            lean_toolchain=DEFAULT_LEAN_TOOLCHAIN,
+            mathlib_rev=DEFAULT_MATHLIB_REV,
+        )
+    batch = build_batch(
+        settings,
+        streams,  # type: ignore[arg-type]
+        epoch_id=epoch_id,
+        target_count=target_count,
+        freshness_path=settings.lemma_supply_freshness_path,
+        skip_baseline_filter=True,
+    )
+    commit_batch(batch, subtensor, wallet=wallet, netuid=settings.netuid)
+    return batch.problems
+
+
 def _verified_solves(
     settings: LemmaSettings,
     problems: dict[str, Problem],
@@ -236,7 +281,18 @@ async def run_epoch(
         subtensor=subtensor,
     )
     k = max(1, int(settings.lemma_epoch_problem_count))
-    problems_list = _problems_for_epoch(source, problem_seed, k)
+    if settings.lemma_supply_pipeline_enabled:
+        problems_list = _supply_pipeline_problems(
+            settings,
+            epoch_id=problem_seed,
+            target_count=k,
+            subtensor=subtensor,
+            wallet=wallet,
+        )
+        if not problems_list:
+            problems_list = _problems_for_epoch(source, problem_seed, k)
+    else:
+        problems_list = _problems_for_epoch(source, problem_seed, k)
     problems = {p.id: p for p in problems_list}
 
     replies_by_theorem: dict[str, dict[int, RevealPayload]] = {}
