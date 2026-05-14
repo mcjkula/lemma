@@ -33,6 +33,12 @@ and public verification evidence.
 
 - Working checkout: `/Users/leehall/lemma`.
 - Local branch: `main` tracking `origin/main`.
+- Current uncommitted working batch: difficulty-weighted rolling scoring and
+  `LEMMA_UID_VARIANT_PROBLEMS` behind a default-off flag. Live weights are built
+  from persisted `rolling_score_by_uid` across eligible non-validator UIDs;
+  ordinary misses/failures decay score, verifier-local infra failures do not
+  update that UID, and same-coldkey partitioning still applies after rolling
+  weights are computed.
 - Latest runtime-impacting batch covered by this handoff: `28fb364` (`Expand
   generated supply and trust docs`) after the 2026-05-14 generated-builder
   expansion and validator-only deploy.
@@ -51,6 +57,19 @@ and public verification evidence.
   - Codex: [`docs/codex-audit.md`](docs/codex-audit.md), rating `8.4 / 10`.
 
 ## Local Verification Snapshot
+
+Current uncommitted rolling-scoring batch:
+
+- `.venv/bin/ruff check lemma tests tools`: passed.
+- `.venv/bin/mypy lemma`: passed,
+  `Success: no issues found in 70 source files`.
+- `.venv/bin/pytest tests -q`: passed,
+  `327 passed, 2 skipped, 12 warnings`.
+- `.venv/bin/python scripts/ci_verify_generated_templates.py`: passed,
+  `OK: generated template metadata/witness gate covered 100 builders`.
+- `RUN_DOCKER_LEAN_TEMPLATES=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest .venv/bin/python scripts/ci_verify_generated_templates.py`:
+  not completed locally because Docker daemon access returned
+  `ConnectionRefusedError(61, 'Connection refused')` after sandbox escalation.
 
 Current local baseline after the generated-builder expansion:
 
@@ -71,6 +90,13 @@ Current local baseline after the generated-builder expansion:
 
 ## Recently Closed
 
+- Local rolling-scoring batch: `LEMMA_SCORING_ROLLING_ALPHA` and split
+  difficulty weights now update `rolling_score_by_uid`; chain weights use
+  positive rolling scores instead of latest passed set or proof-length/Pareto
+  cost.
+- Local UID-variant batch: `LEMMA_UID_VARIANT_PROBLEMS=0` by default; when
+  enabled, each queried UID receives a deterministic same-split theorem variant
+  with UID-bound theorem and metronome checks.
 - Export write failures are non-fatal after scoring; `set_weights` still runs
   when scores are already known.
 - `LEMMA_VALIDATOR_MIN_FREE_BYTES` skips validator epochs before miner queries
