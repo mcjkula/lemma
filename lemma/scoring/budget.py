@@ -26,18 +26,20 @@ def compute_budget(
     *,
     active_uids: set[int],
     registration_block: dict[int, int],
-    commit_block_by_uid: dict[int, int],
-    default_commit_block: int,
+    commit_block: int,
     reign_by_uid: dict[int, int],
 ) -> tuple[dict[int, float], float]:
     """Return ``(miner_weights, burn_share)`` summing to ``1.0``.
 
     ``miner_weights[uid]`` is the absolute share of the epoch budget earned by that
-    miner; ``burn_share`` is the unearned remainder.
+    miner; ``burn_share`` is the unearned remainder. ``commit_block`` is the chain
+    block at which the validator anchored the epoch's theorem batch — the shared
+    timestamp every solve inherits, with ``registration_block`` as the deterministic
+    tie-break.
     """
     fractions = solve_fractions(solved_by_theorem, active_uids)
     solves = [
-        Solve(uid, tid, commit_block_by_uid.get(uid, default_commit_block))
+        Solve(uid, tid, commit_block)
         for tid, uids in solved_by_theorem.items()
         for uid in uids
     ]

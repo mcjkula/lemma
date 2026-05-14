@@ -11,7 +11,7 @@ def test_no_solves_burns_full_budget() -> None:
     weights, burn = compute_budget(
         {"t": set()},
         active_uids=set(range(30)), registration_block=_empty_blocks(30),
-        commit_block_by_uid={}, default_commit_block=100, reign_by_uid={},
+        commit_block=100, reign_by_uid={},
     )
     assert weights == {}
     assert burn == 1.0
@@ -22,7 +22,7 @@ def test_one_solver_hard_theorem_burns_little() -> None:
     weights, burn = compute_budget(
         {"t": {1}},
         active_uids=set(range(30)), registration_block=_empty_blocks(30),
-        commit_block_by_uid={1: 100}, default_commit_block=100, reign_by_uid={},
+        commit_block=100, reign_by_uid={},
     )
     assert set(weights) == {1}
     assert weights[1] > 0.9
@@ -35,7 +35,7 @@ def test_full_network_solves_burns_full_budget() -> None:
     weights, burn = compute_budget(
         {"t": set(range(10))},
         active_uids=set(range(10)), registration_block=_empty_blocks(10),
-        commit_block_by_uid={}, default_commit_block=100, reign_by_uid={},
+        commit_block=100, reign_by_uid={},
     )
     assert weights == {}
     assert burn == 1.0
@@ -47,7 +47,7 @@ def test_single_solver_modest_theorem_burns_remainder() -> None:
     weights, burn = compute_budget(
         {"t": {1}},
         active_uids=set(range(5)), registration_block=_empty_blocks(5),
-        commit_block_by_uid={1: 100}, default_commit_block=100, reign_by_uid={},
+        commit_block=100, reign_by_uid={},
     )
     assert set(weights) == {1}
     assert abs(weights[1] - 0.64) < 1e-9
@@ -63,8 +63,7 @@ def test_multiple_solvers_split_full_budget_when_cap_hits() -> None:
         {"t": {1, 2, 3}},
         active_uids=set(range(30)),
         registration_block={1: 100, 2: 110, 3: 120, **{i: 200 for i in range(30) if i not in {1, 2, 3}}},
-        commit_block_by_uid={1: 100, 2: 100, 3: 100},
-        default_commit_block=100, reign_by_uid={},
+        commit_block=100, reign_by_uid={},
     )
     assert set(weights) == {1, 2, 3}
     assert weights[1] > weights[2] > weights[3]
@@ -77,12 +76,12 @@ def test_long_reign_reduces_earned_increases_burn() -> None:
     fresh, _ = compute_budget(
         {"t": {1}},
         active_uids=set(range(30)), registration_block=_empty_blocks(30),
-        commit_block_by_uid={1: 100}, default_commit_block=100, reign_by_uid={1: 1},
+        commit_block=100, reign_by_uid={1: 1},
     )
     stale, burn_stale = compute_budget(
         {"t": {1}},
         active_uids=set(range(30)), registration_block=_empty_blocks(30),
-        commit_block_by_uid={1: 100}, default_commit_block=100, reign_by_uid={1: 1000},
+        commit_block=100, reign_by_uid={1: 1000},
     )
     assert stale[1] < fresh[1]
     assert burn_stale > (1.0 - fresh[1])
@@ -94,8 +93,7 @@ def test_budget_caps_at_one() -> None:
         {"t": set(range(5))},
         active_uids=set(range(100)),
         registration_block={i: 100 + i for i in range(100)},
-        commit_block_by_uid={i: 100 for i in range(5)},
-        default_commit_block=100, reign_by_uid={},
+        commit_block=100, reign_by_uid={},
     )
     total = sum(weights.values()) + burn
     assert abs(total - 1.0) < 1e-9

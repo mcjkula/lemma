@@ -31,17 +31,15 @@ class ScoringRound:
     solved_by_theorem: dict[str, set[int]] = field(default_factory=dict)
     proofs_by_theorem_uid: dict[tuple[str, int], str] = field(default_factory=dict)
     registration_block: dict[int, int] = field(default_factory=dict)
-    commit_block_by_uid: dict[int, int] = field(default_factory=dict)
     theorem_statements: dict[str, str] = field(default_factory=dict)
 
 
-def run_round(rnd: ScoringRound, *, default_commit_block: int = 100) -> tuple[dict[int, float], float]:
+def run_round(rnd: ScoringRound, *, commit_block: int = 100) -> tuple[dict[int, float], float]:
     """α-rename dedup, then run the budget combiner. Returns ``(weights, burn_share)``."""
     seen: dict[tuple[str, str], int] = {}
     accepted: dict[str, set[int]] = {tid: set() for tid in rnd.solved_by_theorem}
     for tid, uids in rnd.solved_by_theorem.items():
-        ordered = sorted(uids, key=lambda u: (rnd.commit_block_by_uid.get(u, default_commit_block),
-                                              rnd.registration_block.get(u, 10**9)))
+        ordered = sorted(uids, key=lambda u: rnd.registration_block.get(u, 10**9))
         for uid in ordered:
             proof = rnd.proofs_by_theorem_uid.get((tid, uid), "")
             fp = submission_fingerprint(rnd.theorem_statements.get(tid, tid), proof)
@@ -53,8 +51,7 @@ def run_round(rnd: ScoringRound, *, default_commit_block: int = 100) -> tuple[di
         accepted,
         active_uids=set(rnd.miner_uids),
         registration_block=rnd.registration_block,
-        commit_block_by_uid=rnd.commit_block_by_uid,
-        default_commit_block=default_commit_block,
+        commit_block=commit_block,
         reign_by_uid={},
     )
 
@@ -66,7 +63,6 @@ def scenario_replay_attack() -> dict[str, object]:
     rnd.proofs_by_theorem_uid[("t", 1)] = "by trivial"
     rnd.proofs_by_theorem_uid[("t", 2)] = "by trivial"  # identical replay
     rnd.registration_block = {1: 50, 2: 60, **{i: 100 for i in range(30) if i not in {1, 2}}}
-    rnd.commit_block_by_uid = {1: 100, 2: 100}
     w, burn = run_round(rnd)
     return {"name": "replay_attack", "alice_weight": w.get(1, 0.0), "eve_weight": w.get(2, 0.0),
             "burn": burn, "passed": w.get(1, 0.0) > 0.0 and w.get(2, 0.0) == 0.0}
@@ -81,7 +77,6 @@ def _sybil_scenario(name: str) -> dict[str, object]:
     for i in range(1, 11):
         rnd.proofs_by_theorem_uid[("t", i)] = "by trivial"  # sybil clones
     rnd.registration_block = {i: 100 + i for i in network}
-    rnd.commit_block_by_uid = {i: 100 for i in network}
     w, burn = run_round(rnd)
     honest = w.get(0, 0.0)
     sybil = sum(w.get(i, 0.0) for i in range(1, 11))
@@ -113,7 +108,6 @@ def scenario_template_enumerator() -> dict[str, object]:
             rnd.solved_by_theorem[tid].add(1)
             rnd.proofs_by_theorem_uid[(tid, 1)] = "by trivial"
         rnd.registration_block = {i: 100 + i for i in network}
-        rnd.commit_block_by_uid = {i: 100 for i in network}
         w, burn = run_round(rnd)
         for uid, val in w.items():
             weights_total[uid] = weights_total.get(uid, 0.0) + val
@@ -134,7 +128,6 @@ def scenario_registration_tiebreak() -> dict[str, object]:
     rnd.proofs_by_theorem_uid[("t", 2)] = "by trivial"
     rnd.registration_block = {i: 100 + i for i in network}
     rnd.registration_block.update({1: 50, 2: 40})
-    rnd.commit_block_by_uid = {i: 100 for i in network}
     w, burn = run_round(rnd)
     return {"name": "registration_tiebreak", "uid1_weight": w.get(1, 0.0),
             "uid2_weight": w.get(2, 0.0), "burn": burn,
