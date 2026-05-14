@@ -10,7 +10,7 @@ import bittensor
 import httpx
 from loguru import logger
 
-from lemma.catalog.constants import DEFAULT_LEAN_TOOLCHAIN, DEFAULT_MATHLIB_REV
+from lemma.lean import DEFAULT_LEAN_TOOLCHAIN, DEFAULT_MATHLIB_REV
 from lemma.common.problem_seed import (
     effective_chain_head_for_problem_seed,
     resolve_problem_seed,
