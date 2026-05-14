@@ -88,8 +88,8 @@ async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[i
         save_reputation(settings.lemma_reputation_state_path, rep_store)
 
     burn_uid = resolve_burn_uid(metagraph)
-    full, skip = build_full_weights(n, miner_weights, burn_share=burn_share, burn_uid=burn_uid)
-    if not skip and not dry_run:
+    full = build_full_weights(n, miner_weights, burn_share=burn_share, burn_uid=burn_uid)
+    if not dry_run:
         # ``wait_for_inclusion=False`` returns the commit response only — when the subnet
         # has commit-reveal enabled, the SDK enters ``commit_timelocked_weights_extrinsic``
         # and the reveal lands automatically at the next reveal block. We don't await the
@@ -111,9 +111,9 @@ async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[i
             for tid, by_uid in proofs.items() for uid, proof in by_uid.items()
         ])
     logger.info(
-        "epoch theorems={} solved={} earned={:.3f} burn={:.3f} miners_paid={} skip={} elapsed={:.2f}s",
+        "epoch theorems={} solved={} earned={:.3f} burn={:.3f} miners_paid={} elapsed={:.2f}s",
         len(problems), sum(len(v) for v in solved.values()),
-        1.0 - burn_share, burn_share, len(miner_weights), skip,
+        1.0 - burn_share, burn_share, len(miner_weights),
         time.perf_counter() - t0,
     )
     return miner_weights
