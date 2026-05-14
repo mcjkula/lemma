@@ -105,7 +105,10 @@ def _patch_epoch_deps(
         return replies.get(challenge.theorem_id, {})
 
     monkeypatch.setattr(ep, "broadcast_challenge", _broadcast)
-    monkeypatch.setattr(verify_mod, "_verify", lambda _s, _p, _proof: VerifyResult(passed=True, reason="ok"))
+    monkeypatch.setattr(
+        verify_mod, "run_lean_verify",
+        lambda _s, *, verify_timeout_s, problem, proof_script: VerifyResult(passed=True, reason="ok"),  # noqa: ARG005
+    )
     monkeypatch.setattr(ep, "append_corpus", lambda _entries: None)
 
 

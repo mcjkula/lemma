@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from lemma.lean.sandbox import VerifyResult
 from lemma.lean.verify_runner import run_lean_verify
 from lemma.problems.base import Problem
 from lemma.protocol import RevealPayload
@@ -12,16 +11,6 @@ from lemma.scoring.dedup import submission_fingerprint
 
 if TYPE_CHECKING:
     from lemma.common.config import LemmaSettings
-
-
-def _verify(settings: LemmaSettings, problem: Problem, proof_script: str) -> VerifyResult:
-    try:
-        return run_lean_verify(
-            settings, verify_timeout_s=settings.lean_verify_timeout_s,
-            problem=problem, proof_script=proof_script,
-        )
-    except Exception as e:  # noqa: BLE001
-        return VerifyResult(passed=False, reason="docker_error", stderr_tail=str(e)[:8000])
 
 
 def verified_solves(
@@ -38,7 +27,11 @@ def verified_solves(
             fp = submission_fingerprint(problem.challenge_source(), reply.proof_script)
             if fp in seen[tid]:
                 continue
-            if not _verify(settings, problem, reply.proof_script).passed:
+            result = run_lean_verify(
+                settings, verify_timeout_s=settings.lean_verify_timeout_s,
+                problem=problem, proof_script=reply.proof_script,
+            )
+            if not result.passed:
                 continue
             seen[tid].add(fp)
             solved[tid].add(uid)

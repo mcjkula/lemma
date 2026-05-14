@@ -17,7 +17,6 @@ def run_lean_verify(
     return LeanSandbox(
         docker_worker=settings.lemma_lean_docker_worker or "",
         timeout_s=verify_timeout_s,
-        workspace_cache_enabled=settings.lemma_lean_workspace_cache_enabled,
         workspace_cache_include_submission_hash=settings.lemma_lean_workspace_cache_include_submission_hash,
         workspace_cache_max_dirs=settings.lemma_lean_workspace_cache_max_dirs,
         workspace_cache_max_bytes=settings.lemma_lean_workspace_cache_max_bytes,
