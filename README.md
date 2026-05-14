@@ -21,9 +21,13 @@ Anything that can be formalized as a Lean statement can become work for Lemma:
 algebra, number theory, logic, combinatorics, geometry, computer science,
 cryptography, and more.
 
+Lemma is still proof-of-concept software. It currently runs on Bittensor testnet as **subnet 467** (`--network test`; set `NETUID=467` in `.env`). Mainnet, also known as Finney, is separate. Only treat mainnet rewards or tokens as relevant when the deployment you are following is registered, active, and matched to the correct **network** and **netuid**.
+
 For the per-epoch budget mechanism, see [docs/burn.md](docs/burn.md).
 
 ## Quick start
+
+To try the CLI locally:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -33,14 +37,15 @@ uv sync --extra btcli
 uv run lemma --help
 ```
 
-CLI: `lemma doctor`, `lemma miner start`, `lemma validator start`,
-`lemma validator dry-run`, `lemma corpus push <s3-url>`, `lemma weights`.
+Use one environment and one tool: `uv`. The Lemma `.venv` holds subnet dependencies and the `lemma` command (`doctor`, `miner`, `validator`, `corpus`, `weights`). Wallets use `btcli` from [bittensor-cli](https://pypi.org/project/bittensor-cli/); install it here with `uv sync --extra btcli` (or `uv sync --extra dev --extra btcli` for development).
+
+**Validators:** start with `lemma validator start` (or Docker `ENTRYPOINT ["lemma"]` / `CMD ["validator", "start"]`).
 
 ### Operators
 
-The sample [`docker-compose.yml`](docker-compose.yml) runs Lemma services in
-containers and mounts `/var/run/docker.sock` so validators can spawn isolated
-proof-checking containers. Lock down the host before using this setup.
+The sample [`docker-compose.yml`](docker-compose.yml) runs Lemma services in containers. It also mounts **`/var/run/docker.sock`** so validators can spawn isolated proof-checking containers. That socket is high privilege. Lock down the host before using this setup in production.
+
+In the miner docs, **axon** is Bittensor's term for the network address and port where your miner listens for validator traffic. Open that port intentionally in firewalls and cloud security groups.
 
 ## References
 
@@ -51,3 +56,7 @@ proof-checking containers. Lock down the host before using this setup.
 ## License
 
 Apache-2.0
+
+## Original Contributors
+
+Spaceτime, Maciej Kula, and Infinitao.
