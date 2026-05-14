@@ -1,0 +1,71 @@
+# The epoch budget and burn share
+
+Every Lemma epoch starts with a budget of `1.0`. The portion paid to miners is
+the portion the network *earned*; the rest burns to the subnet's burn hotkey.
+There is no path where unearned emission flows to miners — not via skip-set-weights,
+not via stale weight persistence, not via fallback. Burn is the structural answer
+to "the network produced less than full value this epoch."
+
+## How the budget is computed
+
+For each verified (miner, theorem) solve, the protocol assigns:
+
+```
+r = base_reward(theorem) × 0.5^rank × 0.5^pareto_layer × reign_factor(uid)
+```
+
+where
+
+- `base_reward(t) = (1 - solve_fraction(t))²` — observed-difficulty pricing.
+- `rank` is the first-to-solve rank (0 = earliest chain-stamped commit; ties
+  broken by registration block).
+- `pareto_layer` peels miners by their per-theorem reward vectors; layer-0
+  miners are non-dominated.
+- `reign_factor(uid) = (1 - 0.0033)^(reign_length - 1)` — Affine-style decay
+  for long-running champions.
+
+Per miner: `raw_share(uid) = Σ_t r(uid, t)`. The earned share is the sum across
+miners, capped at `1.0`. The burn share is `1.0 - earned`.
+
+| Scenario | solve_fraction | base_reward | earned | burn |
+|---|---|---|---|---|
+| Nobody solves | 0 | 1.0 | 0.0 | **1.0** |
+| 1 solver out of 5 (modest) | 0.2 | 0.64 | 0.64 | **0.36** |
+| 1 solver out of 30 (hard) | 0.033 | 0.935 | 0.935 | **0.065** |
+| 11 solvers out of 30 | 0.367 | 0.401 | ~1.0 (capped) | **0** |
+| Everyone solves (trivial) | 1.0 | 0.0 | 0.0 | **1.0** |
+
+## Where the burn goes
+
+The burn share routes via `set_weights` to a single UID. Resolution order:
+
+1. `LEMMA_BURN_HOTKEY_SS58` env override.
+2. Subnet owner's hotkey from `subtensor.get_subnet_info(netuid).owner_hotkey`.
+
+That hotkey **must be registered on the subnet as a UID** — otherwise the
+validator can't route weight to it and logs a warning. The recommended setup
+is a dedicated treasury hotkey (e.g. registered exclusively to receive burn),
+not the validator's own UID.
+
+## Why this is not a fallback
+
+Earlier drafts of the design used a skip-set-weights branch: when no miner
+earned anything, the validator simply didn't call `set_weights`, and the chain
+kept the prior epoch's weight vector. That meant past winners kept earning
+even on epochs the network produced nothing.
+
+Burn replaces that with: every epoch publishes weights, and the unearned share
+is structurally redirected. Three consequences:
+
+1. **Past winners face the same pressure as everyone else.** A monopolist who
+   solved heavily for ten epochs earns zero on an unsolved epoch, just like
+   every other miner.
+2. **Burn rate is observable.** A spike in burn signals "the network is not
+   producing" and prompts intervention — easier supply, better miners, or
+   escalation to the Stage 3 bounty channel.
+3. **Trivial work doesn't drain the budget.** A theorem solved by 100% of
+   miners has `base_reward = 0` and therefore earns nothing — the budget burns
+   instead of being split among the trivial-solvers.
+
+The protocol invariant: `Σ miner_weights + burn_share = 1.0` every epoch,
+always, with no exceptions.
