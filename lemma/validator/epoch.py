@@ -31,7 +31,7 @@ from lemma.supply.competition_formal import CompetitionFormalSource
 from lemma.supply.mathlib_sorrys import MathlibSorrysSource
 from lemma.supply.perturb_mathlib import PerturbedMathlibSource
 from lemma.supply.pipeline import build_batch
-from lemma.transport.chain_commit import anchor_batch
+from lemma.transport.chain_commit import anchor_batch, fetch_commits
 from lemma.transport.client import signed_post
 from lemma.validator.corpus import CorpusEntry, append as append_corpus
 from lemma.validator.weights_policy import build_full_weights
@@ -225,11 +225,12 @@ def _compose_weights(
     active_uids: set[int],
     registration_block: dict[int, int],
     commit_block: int,
+    commit_block_by_uid: dict[int, int],
     reign_by_uid: dict[int, int],
 ) -> dict[int, float]:
     fractions = solve_fractions(solved_by_theorem, active_uids)
     solves = [
-        Solve(miner_uid=uid, theorem_id=tid, commit_block=commit_block)
+        Solve(miner_uid=uid, theorem_id=tid, commit_block=commit_block_by_uid.get(uid, commit_block))
         for tid, uids in solved_by_theorem.items()
         for uid in uids
     ]
@@ -319,12 +320,19 @@ async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[i
 
     solved, proofs = _verified_solves(settings, problems, replies_by_theorem)
 
+    uid_by_hotkey = {metagraph.hotkeys[u]: u for u in range(metagraph.n)}
+    chain_commits = fetch_commits(
+        subtensor, netuid=settings.netuid, epoch_id=problem_seed, uid_by_hotkey=uid_by_hotkey,
+    )
+    commit_block_by_uid = {c.miner_uid: c.commit_block for c in chain_commits}
+
     rep_store = load_reputation(settings.lemma_reputation_state_path)
     weights = _compose_weights(
         solved_by_theorem=solved,
         active_uids=set(range(metagraph.n)),
         registration_block=_registration_blocks(metagraph),
         commit_block=commit_block,
+        commit_block_by_uid=commit_block_by_uid,
         reign_by_uid=rep_store.reign_by_uid,
     )
     champions = [uid for uid, w in weights.items() if w > 0.0]
