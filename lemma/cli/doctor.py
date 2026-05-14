@@ -81,7 +81,7 @@ def run_doctor() -> int:
             "\n5  Next commands\n"
             "     lemma validator dry-run   - validate scoring loop without writing weights\n"
             "     lemma validator start     - run scoring rounds and set_weights\n"
-            "     lemma miner start         - serve /lemma/commit and /lemma/reveal\n"
+            "     lemma miner start         - serve /lemma/reveal\n"
             "     lemma weights             - print chain head + netuid (debug)\n",
             dim=True,
         ),

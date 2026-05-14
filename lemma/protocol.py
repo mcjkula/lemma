@@ -16,14 +16,6 @@ class ChallengePayload:
     deadline_block: int
     metronome_id: str
     imports: list[str] = field(default_factory=lambda: ["Mathlib"])
-    phase: str = "off"
-
-
-@dataclass(frozen=True, slots=True)
-class CommitPayload:
-    theorem_id: str
-    metronome_id: str
-    proof_commitment_hex: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,8 +23,6 @@ class RevealPayload:
     theorem_id: str
     metronome_id: str
     proof_script: str
-    commit_reveal_nonce_hex: str | None = None
-    model_card: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
