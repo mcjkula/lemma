@@ -12,13 +12,7 @@ class BurnUidUnavailable(RuntimeError):
 
 
 def get_subtensor(settings: LemmaSettings) -> bittensor.Subtensor:
-    endpoint = (settings.subtensor_chain_endpoint or "").strip()
-    if endpoint:
-        return bittensor.Subtensor(network=endpoint)
-    name = (settings.subtensor_network or "").strip()
-    if name:
-        return bittensor.Subtensor(network=name)
-    return bittensor.Subtensor()
+    return bittensor.Subtensor(network=settings.subtensor_chain_endpoint or settings.subtensor_network)
 
 
 def resolve_burn_uid(metagraph: bittensor.Metagraph) -> int:

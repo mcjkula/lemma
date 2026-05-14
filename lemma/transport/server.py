@@ -21,7 +21,7 @@ class RequestContext:
 
 async def verify_epistula(request: Request, receiver_ss58: str) -> RequestContext:
     body = await request.body()
-    if _MAX_CHARS > 0 and len(body) > _MAX_CHARS:
+    if len(body) > _MAX_CHARS:
         raise HTTPException(status_code=413, detail=f"body exceeds {_MAX_CHARS} chars")
     headers = EpistulaHeaders.from_http_headers(dict(request.headers))
     if headers is None:
