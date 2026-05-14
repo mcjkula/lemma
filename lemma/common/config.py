@@ -217,13 +217,6 @@ class LemmaSettings(BaseSettings):
         validation_alias="VALIDATOR_MIN_FREE_BYTES",
     )
 
-    training_export_jsonl: Path | None = Field(
-        default=None, validation_alias="LEMMA_TRAINING_EXPORT_JSONL",
-    )
-    lemma_training_export_profile: Literal["full", "summary"] = Field(
-        default="full", validation_alias="LEMMA_TRAINING_EXPORT_PROFILE",
-    )
-
     lemma_scoring_rolling_alpha: float = Field(
         default=0.08, gt=0.0, le=1.0, validation_alias="LEMMA_SCORING_ROLLING_ALPHA",
     )
