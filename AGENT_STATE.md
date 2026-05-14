@@ -33,15 +33,19 @@ and public verification evidence.
 
 - Working checkout: `/Users/leehall/lemma`.
 - Local branch: `main` tracking `origin/main`.
-- Latest runtime batch covered by this handoff: `0ff1068` (`Record CI evidence
-  for set_weights cleanup`) after the 2026-05-13 lemmasub.net dashboard plus
-  droplet audit follow-up.
+- Latest pushed batch covered by this handoff: `28fb364` (`Expand generated
+  supply and trust docs`) after the 2026-05-14 generated-builder expansion and
+  validator-only deploy.
 - Latest GitHub-confirmed runtime head: `0ff1068` (`Record CI evidence for
   set_weights cleanup`), with `CI` passing on GitHub Actions run
   `25793725075`. The preceding code commit `d95411b` also had `CI` and
   `Build and Push Docker Image` passing on runs `25793209291` and
-  `25793209296`.
-- Current testnet Droplet head: `0ff1068` on both known hosts.
+  `25793209296`. The newer `28fb364` head has local tests and Docker Lean
+  template verification recorded below, but this handoff did not re-check
+  GitHub Actions.
+- Current testnet Droplet head: validator / Lean worker host checkout is
+  `28fb364`; the validator service was restarted. The miner host remains
+  `0ff1068`.
 - Latest audit docs:
   - Cursor: [`docs/cursor-audit.md`](docs/cursor-audit.md), rating `7.5 / 10`.
   - Codex: [`docs/codex-audit.md`](docs/codex-audit.md), rating `8.4 / 10`.
@@ -100,12 +104,14 @@ Current local baseline after the generated-builder expansion:
 ## VPS Status Snapshot
 
 Read-only sampling plus the follow-up deploy on 2026-05-13 moved both known
-testnet Droplets to `0ff1068`.
+testnet Droplets to `0ff1068`. The 2026-05-14 generated-supply rollout then
+fast-forwarded the validator / Lean worker host checkout to `28fb364`; miner
+services were not restarted and remain on `0ff1068`.
 
-- Validator / Lean worker `root@167.99.145.132`: deployed `0ff1068`;
-  `lemma-validator`, `lemma-lean-worker-http`, and
-  `lemma-public-dashboard.timer` active; Lean worker health on
-  `127.0.0.1:8787` returned `{"status": "ok"}`.
+- Validator / Lean worker `root@167.99.145.132`: checkout `28fb364`;
+  `lemma-validator` active after restart; `lemma-lean-worker-http` and
+  `lemma-public-dashboard.timer` remain active from the prior deploy; Lean
+  worker health on `127.0.0.1:8787` previously returned `{"status": "ok"}`.
 - Miner host `root@161.35.50.115`: deployed `0ff1068`; six miner services
   active.
 - During the deploy, the validator failed closed on stale subnet pins after the
@@ -117,6 +123,17 @@ testnet Droplets to `0ff1068`.
   `f4ae425ad437c97b00d47b7ba97f97e1ff4cec8d5d66290c8b2364d91f822311`.
 - After the pin update and restart, validator logs showed
   `problem_source=hybrid` and the expected registry hash.
+- During the `28fb364` validator rollout, an initial subnet-pins refresh run
+  outside `/opt/lemma` wrote a bad profile pin and the validator failed closed.
+  Rerunning from `/opt/lemma` restored profile pin
+  `85155229a2c1a0dd9537434d89a7c924368f888e4602b6d909757b09285b0a9c` and set
+  problem-supply pin
+  `8b7dccd4fc2a1cf68ad1e1e0ee35ea8680bdc05b24abdb7819ec1dbaee0c1556`; after
+  restart, the service was active and logged `problem_source=hybrid`.
+- First observed post-`28fb364` validator round completed at
+  `2026-05-14 05:46 UTC`: `theorem_id=gen/7117800`, split `medium`,
+  `verified=3`, `scored=3`, `verify_infra_errors=0`, no reject counters, and
+  `set_weights success=True`.
 - First observed post-`0ff1068` round completed at `2026-05-13 10:59 UTC`:
   `theorem_id=gen/7112100`, split `medium`, `verified=5`, `scored=5`,
   `verify_infra_errors=0`, no reject counters. `set_weights` returned false
