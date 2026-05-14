@@ -33,7 +33,6 @@ from lemma.protocol_commit_reveal import (
     normalize_commitment_hex,
     verify_reveal_against_commitment,
 )
-from lemma.scoring.dedup import partition_same_coldkey_weights
 from lemma.scoring.reputation import apply_rolling_outcomes, load_reputation, rolling_weights, save_reputation
 from lemma.validator.training_export import append_epoch_jsonl, round_summary_record, training_record
 from lemma.validator.weights_policy import build_full_weights
@@ -392,7 +391,6 @@ async def run_epoch(
 
     total_verified = 0
     total_scored = 0
-    coldkey_partitioned = 0
     deadline_rejects = 0
     challenge_rejects = 0
     payload_rejects = 0
@@ -672,11 +670,6 @@ async def run_epoch(
 
     eligible_scores = {uid: rep_store.rolling_score_by_uid.get(uid, 0.0) for uid in uids}
     weights_by_uid = rolling_weights(eligible_scores)
-    if settings.lemma_scoring_coldkey_partition and weights_by_uid:
-        weights_by_uid, coldkey_partitioned = partition_same_coldkey_weights(
-            weights_by_uid,
-            lambda u: _coldkey_for_uid(metagraph, u),
-        )
 
     logger.debug(
         "epoch concurrency caps used: LEMMA_LEAN_VERIFY_MAX_CONCURRENT={} k_problems={}",
@@ -726,7 +719,7 @@ async def run_epoch(
         "lemma_epoch_summary chain_head_block={} problem_seed_chain_head={} problem_seed_slack_blocks={} "
         "problem_seed={} problem_seed_tag={} split={} "
         "theorem_id={} k_problems={} uid_variant_problems={} verified={} scored={} weight_entries={} "
-        "coldkey_partitioned={} deadline_rejects={} "
+        "deadline_rejects={} "
         "challenge_rejects={} payload_rejects={} "
         "commit_reveal_rejects={} verify_infra_errors={} "
         "skip_set_weights={} seconds={:.2f}  "
@@ -743,7 +736,6 @@ async def run_epoch(
         total_verified,
         total_scored,
         len(weights_by_uid),
-        coldkey_partitioned,
         deadline_rejects,
         challenge_rejects,
         payload_rejects,

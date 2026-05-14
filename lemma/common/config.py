@@ -224,9 +224,6 @@ class LemmaSettings(BaseSettings):
         default="full", validation_alias="LEMMA_TRAINING_EXPORT_PROFILE",
     )
 
-    lemma_scoring_coldkey_partition: bool = Field(
-        default=True, validation_alias="LEMMA_SCORING_COLDKEY_PARTITION",
-    )
     lemma_scoring_rolling_alpha: float = Field(
         default=0.08, gt=0.0, le=1.0, validation_alias="LEMMA_SCORING_ROLLING_ALPHA",
     )
