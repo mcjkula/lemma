@@ -74,4 +74,5 @@ ignore_missing_imports = true
 asyncio_mode = "auto"
 markers = [
     "docker: tests that require Docker and the lean-sandbox image",
+    "integration: tests that hit external systems (chain, docker) — opt-in via env",
 ]
