@@ -46,29 +46,11 @@ def _raise_if_prover_model_is_studio_client_id(model: str | None) -> None:
         )
 
 
-PROVER_SYSTEM = """You are an expert Lean 4 prover. The user message has only:
-1. "Imports hint": suggested modules for this challenge.
-2. "Theorem block": the exact Lean theorem source to prove.
-
-Return ONLY a JSON object, with no markdown fences:
-{
-  "proof_script": "complete Submission.lean contents"
-}
-
-Lean contract:
-- `proof_script` must be the complete `Submission.lean`: imports, `namespace Submission`, the theorem with the
-  same name and statement as the challenge, and `end Submission`.
-- Prove the theorem as stated; do not change the statement or add assumptions.
-- This namespace is required because `Solution.lean` imports `Submission` and checks `Submission.<theorem_name>`.
-- Correctness comes first. Mathlib lemmas, `simp`, `rw`, `ring`, `linarith`, `exact`, `calc`, `cases`, and induction
-  are all allowed when appropriate.
-- Do not use `sorry`, `admit`, `axiom`, or custom unsound declarations.
-- For reversed associativity goals over Nat multiplication, use `(Nat.mul_assoc a b c).symm`, a left rewrite, or
-  `symm` before `Nat.mul_assoc`.
-- For Real absolute-value triangle goals, `abs_add_le a b` or `dist_triangle` with `Real.dist_eq` is usually the
-  right Mathlib route after rewriting the expression into the needed shape.
-- For integer absolute-value triangle goals like `|x + y| ≤ |x| + |y|`, use `abs_add_le x y`.
-"""
+PROVER_SYSTEM = (
+    "Return only a JSON object {\"proof_script\": \"complete Submission.lean\"}. "
+    "The proof must close the given theorem inside `namespace Submission` "
+    "without sorry, admit, axiom, or unsafe declarations."
+)
 
 
 class LLMProver:
