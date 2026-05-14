@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import bittensor
 import uvicorn
+from bittensor.core.extrinsics.serving import serve_extrinsic
 from fastapi import Depends, FastAPI, Request, Response
 from loguru import logger
 
@@ -57,7 +58,7 @@ class MinerService:
         subtensor = get_subtensor(s)
         external_ip = (s.axon_external_ip or "").strip() or discover_public_ipv4()
         if external_ip:
-            bittensor.serve_extrinsic(
+            serve_extrinsic(
                 subtensor=subtensor, wallet=wallet, ip=external_ip,
                 port=s.axon_port, protocol=4, netuid=s.netuid,
             )
