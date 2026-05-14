@@ -123,5 +123,14 @@ class LemmaSettings(BaseSettings):
         default=500_000, ge=1024, validation_alias="LEMMA_INBOUND_MAX_CHARS",
     )
 
+    # §7.2 rollback flags. Old branches (`synapse`, `rolling`) were physically deleted
+    # one generation ago; setting them now fails fast rather than silently falling back.
+    lemma_transport: Literal["http", "synapse"] = Field(
+        default="http", validation_alias="LEMMA_TRANSPORT",
+    )
+    lemma_scoring_mode: Literal["pareto", "rolling"] = Field(
+        default="pareto", validation_alias="LEMMA_SCORING_MODE",
+    )
+
     def validator_wallet_names(self) -> tuple[str, str]:
         return (self.wallet_cold, self.wallet_hot)

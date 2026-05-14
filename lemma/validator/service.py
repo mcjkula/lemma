@@ -69,6 +69,16 @@ def validator_startup_issues(settings: LemmaSettings) -> list[str]:
     fatal: list[str] = []
     if not settings.lean_use_docker:
         fatal.append(_DOCKER_REQUIRED_ERROR)
+    if settings.lemma_transport != "http":
+        fatal.append(
+            f"LEMMA_TRANSPORT={settings.lemma_transport!r} is unsupported; "
+            "the bt.Synapse transport was removed one generation ago. Set LEMMA_TRANSPORT=http.",
+        )
+    if settings.lemma_scoring_mode != "pareto":
+        fatal.append(
+            f"LEMMA_SCORING_MODE={settings.lemma_scoring_mode!r} is unsupported; "
+            "rolling scoring was removed one generation ago. Set LEMMA_SCORING_MODE=pareto.",
+        )
     return fatal
 
 
