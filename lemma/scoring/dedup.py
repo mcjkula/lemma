@@ -17,7 +17,7 @@ _BINDER_PATTERNS = tuple(re.compile(p) for p in (
 
 
 def _strip_lean_comments(src: str) -> str:
-    out = src or ""
+    out = src
     while "/-" in out:
         new = re.sub(r"/-[\s\S]*?-/", "", out, count=1)
         if new == out:
@@ -41,9 +41,6 @@ def alpha_rename_proof(proof_script: str) -> str:
 
 
 def submission_fingerprint(theorem_statement: str, proof_script: str) -> str:
-    norm_theorem = re.sub(r"\s+", " ", (theorem_statement or "").strip())
+    norm_theorem = re.sub(r"\s+", " ", theorem_statement.strip())
     norm_proof = re.sub(r"\s+", " ", alpha_rename_proof(proof_script).strip())
-    h = hashlib.sha256()
-    h.update(norm_theorem.encode("utf-8")); h.update(b"\x1e")
-    h.update(norm_proof.encode("utf-8")); h.update(b"\x1e")
-    return h.hexdigest()
+    return hashlib.sha256(norm_theorem.encode("utf-8") + b"\x1e" + norm_proof.encode("utf-8") + b"\x1e").hexdigest()
