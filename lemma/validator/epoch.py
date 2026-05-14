@@ -24,17 +24,9 @@ if TYPE_CHECKING:
     from lemma.common.config import LemmaSettings
 
 
-def _registration_blocks(metagraph: bittensor.metagraph) -> dict[int, int]:
-    out: dict[int, int] = {}
-    blocks = getattr(metagraph, "block_at_registration", None)
-    if blocks is None:
-        return out
-    for uid in range(metagraph.n):
-        try:
-            out[uid] = int(blocks[uid])
-        except (IndexError, TypeError, ValueError):
-            continue
-    return out
+def _registration_blocks(metagraph: bittensor.Metagraph) -> dict[int, int]:
+    blocks = metagraph.block_at_registration
+    return {uid: int(blocks[uid]) for uid in range(int(metagraph.n))}
 
 
 async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[int, float]:
@@ -42,6 +34,7 @@ async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[i
     wallet = bittensor.Wallet(name=settings.wallet_cold, hotkey=settings.wallet_hot)
     subtensor = get_subtensor(settings)
     metagraph = subtensor.metagraph(settings.netuid)
+    n = int(metagraph.n)
     cur_block = int(subtensor.get_current_block())
     problem_seed, _tag = resolve_problem_seed(
         chain_head_block=effective_chain_head_for_problem_seed(
@@ -82,7 +75,7 @@ async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[i
     rep_store = load_reputation(settings.lemma_reputation_state_path)
     miner_weights, burn_share = compute_budget(
         solved,
-        active_uids=set(range(metagraph.n)),
+        active_uids=set(range(n)),
         registration_block=_registration_blocks(metagraph),
         commit_block=commit_block,
         reign_by_uid=rep_store.reign_by_uid,
@@ -94,17 +87,19 @@ async def run_epoch(settings: LemmaSettings, *, dry_run: bool = False) -> dict[i
     if not dry_run:
         save_reputation(settings.lemma_reputation_state_path, rep_store)
 
-    burn_uid = resolve_burn_uid(settings, subtensor, metagraph)
-    full, skip = build_full_weights(
-        metagraph.n, miner_weights, burn_share=burn_share, burn_uid=burn_uid,
-    )
+    burn_uid = resolve_burn_uid(metagraph)
+    full, skip = build_full_weights(n, miner_weights, burn_share=burn_share, burn_uid=burn_uid)
     if not skip and not dry_run:
+        # ``wait_for_inclusion=False`` returns the commit response only — when the subnet
+        # has commit-reveal enabled, the SDK enters ``commit_timelocked_weights_extrinsic``
+        # and the reveal lands automatically at the next reveal block. We don't await the
+        # reveal because the validator loop has already moved on by then.
         response = subtensor.set_weights(
-            wallet=wallet, netuid=settings.netuid, uids=list(range(metagraph.n)),
+            wallet=wallet, netuid=settings.netuid, uids=list(range(n)),
             weights=full, wait_for_inclusion=False,
         )
-        if not getattr(response, "success", True):
-            logger.warning("set_weights returned failure: {}", getattr(response, "message", ""))
+        if not response.success:
+            logger.warning("set_weights returned failure: {}", response.message)
     if not dry_run:
         append_corpus([
             CorpusEntry(
