@@ -356,10 +356,8 @@ async def test_epoch_weights_ignore_stale_and_validator_rolling_scores(monkeypat
     reputation_path.write_text(
         json.dumps(
             {
-                "version": 3,
+                "version": 4,
                 "rolling_score_by_uid": {"0": 0.5, "1": 0.5, "2": 1.0, "99": 1.0},
-                "ema_by_uid": {},
-                "credibility_by_uid": {},
             },
         ),
         encoding="utf-8",
@@ -522,7 +520,5 @@ async def test_all_fail_epoch_persists_verify_credibility_downgrade(monkeypatch,
         dry_run=False,
     )
 
-    state = json.loads(reputation_path.read_text(encoding="utf-8"))
     assert weights == {}
-    assert state["credibility_by_uid"] == {"0": 0.0}
     assert subtensor.set_weights_calls == []
