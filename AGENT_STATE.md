@@ -23,6 +23,12 @@ Informal reasoning and optional prose-judge tooling are out-of-band. Do not add
 reasoning prose, subjective judge scores, or proof-efficiency heuristics back
 into the live reward path without a separate product decision.
 
+Describe the protocol as trust-minimized, not absolutely trustless. Lean checks
+proof validity; registry/profile hashes align validators; hashes do not prove
+problem quality, source licensing, or open-problem faithfulness. Future release
+work should make third-party reruns easier through immutable image refs, hashes,
+and public verification evidence.
+
 ## Current Repository State
 
 - Working checkout: `/Users/leehall/lemma`.
@@ -42,17 +48,21 @@ into the live reward path without a separate product decision.
 
 ## Local Verification Snapshot
 
-Current local baseline after the 2026-05-13 extreme-split problem-supply update:
+Current local baseline after the generated-builder expansion:
 
 - `.venv/bin/ruff check lemma tests tools`: passed.
 - `.venv/bin/mypy lemma`: passed,
   `Success: no issues found in 70 source files`.
 - `.venv/bin/pytest tests -q`: passed,
-  `314 passed, 2 skipped, 12 warnings`.
+  `315 passed, 2 skipped, 12 warnings`.
 - `.venv/bin/python scripts/ci_verify_generated_templates.py`:
-  `OK: generated template metadata/witness gate covered 85 builders`.
+  `OK: generated template metadata/witness gate covered 100 builders`.
+- Local generated registry hash:
+  `b926194367c2b0ef25dd5da4179256e7b70185cf3eb0543cbc603a73a45efff3`.
+- Local hybrid problem-supply hash:
+  `8b7dccd4fc2a1cf68ad1e1e0ee35ea8680bdc05b24abdb7819ec1dbaee0c1556`.
 - `RUN_DOCKER_LEAN_TEMPLATES=1 LEAN_SANDBOX_IMAGE=lemma/lean-sandbox:latest .venv/bin/python scripts/ci_verify_generated_templates.py`:
-  passed; all 85 generated template stubs and witnesses built in one Docker
+  passed; all 100 generated template stubs and witnesses built in one Docker
   workspace.
 
 ## Recently Closed
@@ -81,6 +91,11 @@ Current local baseline after the 2026-05-13 extreme-split problem-supply update:
 - Legacy `reasoning_only`, `LEMMA_JUDGE_PROFILE_ATTEST_*`,
   `JUDGE_PROFILE_SHA256_EXPECTED`, and `/lemma/judge_profile_sha256` surfaces
   are retired.
+- Generated problem registry now has 100 builders after the first missing-topic
+  expansion batch.
+- Trust-minimized design docs now distinguish proof verification, release
+  alignment, Docker/toolchain pinning, public verification evidence, and
+  open-problem faithfulness review.
 
 ## VPS Status Snapshot
 
