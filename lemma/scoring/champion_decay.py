@@ -1,4 +1,4 @@
-"""Anti-monopoly reign decay (Affine pattern, ~0.33%/epoch default)."""
+"""Anti-monopoly reign decay (~0.33%/epoch default)."""
 
 from __future__ import annotations
 

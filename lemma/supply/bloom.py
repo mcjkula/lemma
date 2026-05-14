@@ -1,9 +1,4 @@
-"""Minimal byte-array bloom filter for public-corpus freshness gate.
-
-Used by ``FreshnessRegistry`` to reject candidate theorems whose normalised
-hash matches a known public corpus (Mathlib history, Lean Workbook, miniF2F,
-PutnamBench, ProofNet). Build with ``scripts/build_freshness_bloom.py``;
-rebuild monthly per litepaper §10.
+"""Minimal byte-array bloom filter for the public-corpus freshness gate.
 
 File format::
 

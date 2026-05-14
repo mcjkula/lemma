@@ -145,7 +145,7 @@ SCENARIOS = (
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--duration", default=None, help="ignored; kept for plan §2.F compat")
+    ap.add_argument("--duration", default=None, help="ignored; accepted for CLI compatibility")
     ap.add_argument("--report", default="-")
     args = ap.parse_args()
 

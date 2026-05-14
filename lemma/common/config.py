@@ -113,8 +113,7 @@ class LemmaSettings(BaseSettings):
         default=500_000, ge=1024, validation_alias="LEMMA_INBOUND_MAX_CHARS",
     )
 
-    # §7.2 rollback flags. Old branches (`synapse`, `rolling`) were physically deleted
-    # one generation ago; setting them now fails fast rather than silently falling back.
+    # Legacy transport / scoring values fail fast — the only working values are "http" and "pareto".
     lemma_transport: Literal["http", "synapse"] = Field(
         default="http", validation_alias="LEMMA_TRANSPORT",
     )

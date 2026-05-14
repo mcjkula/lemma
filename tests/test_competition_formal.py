@@ -26,13 +26,13 @@ def test_loads_and_samples(tmp_path: Path) -> None:
     _write(
         f,
         [
-            {"theorem_name": "putnam2025_a1", "type_expr": "True", "split": "extreme"},
-            {"theorem_name": "putnam2025_b1", "type_expr": "1 + 1 = 2", "split": "hard"},
+            {"theorem_name": "thm_a", "type_expr": "True", "split": "extreme"},
+            {"theorem_name": "thm_b", "type_expr": "1 + 1 = 2", "split": "hard"},
         ],
     )
     out = _source(f).draw(epoch_id=1, count=2, rng_seed=b"s")
     names = sorted(p.theorem_name for p in out)
-    assert names == ["putnam2025_a1", "putnam2025_b1"]
+    assert names == ["thm_a", "thm_b"]
     assert all(p.extra["source"] == "competition_formal" for p in out)
 
 

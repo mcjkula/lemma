@@ -4,15 +4,12 @@
 Usage::
 
     python scripts/build_freshness_bloom.py \\
-        --root path/to/mathlib4 \\
-        --root path/to/lean-workbook \\
-        --root path/to/minif2f \\
-        --root path/to/PutnamBench \\
-        --root path/to/ProofNet \\
+        --root path/to/corpus_a \\
+        --root path/to/corpus_b \\
         --out data/freshness_bloom.bin
 
-Rebuild monthly per litepaper §10. The validator loads the file at startup;
-candidates whose normalised hash is in the bloom are blocked by freshness.
+Rebuild monthly. The validator loads the file at startup; candidate theorems
+whose normalised hash is in the bloom are rejected by the freshness gate.
 """
 
 from __future__ import annotations
