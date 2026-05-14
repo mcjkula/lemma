@@ -52,14 +52,9 @@ def validator_problem_window(
 
 
 def validator_startup_issues(settings: LemmaSettings) -> list[str]:
-    fatal: list[str] = []
-    if not settings.lean_use_docker:
-        fatal.append("lemma validator requires Docker for Lean verify (LEMMA_USE_DOCKER=true).")
-    if settings.lemma_transport != "http":
-        fatal.append(f"LEMMA_TRANSPORT={settings.lemma_transport!r} unsupported — set LEMMA_TRANSPORT=http.")
-    if settings.lemma_scoring_mode != "pareto":
-        fatal.append(f"LEMMA_SCORING_MODE={settings.lemma_scoring_mode!r} unsupported — set LEMMA_SCORING_MODE=pareto.")
-    return fatal
+    if settings.lean_use_docker:
+        return []
+    return ["lemma validator requires Docker for Lean verify (LEMMA_USE_DOCKER=true)."]
 
 
 class ValidatorService:

@@ -113,13 +113,5 @@ class LemmaSettings(BaseSettings):
         default=500_000, ge=1024, validation_alias="LEMMA_INBOUND_MAX_CHARS",
     )
 
-    # Legacy transport / scoring values fail fast — the only working values are "http" and "pareto".
-    lemma_transport: Literal["http", "synapse"] = Field(
-        default="http", validation_alias="LEMMA_TRANSPORT",
-    )
-    lemma_scoring_mode: Literal["pareto", "rolling"] = Field(
-        default="pareto", validation_alias="LEMMA_SCORING_MODE",
-    )
-
     def validator_wallet_names(self) -> tuple[str, str]:
         return (self.wallet_cold, self.wallet_hot)
