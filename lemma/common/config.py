@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -17,28 +17,13 @@ class LemmaSettings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",
-        populate_by_name=False,
+        populate_by_name=True,
     )
-
-    def __init__(self, **data: Any) -> None:
-        for name, field in type(self).model_fields.items():
-            if name not in data:
-                continue
-            alias = field.validation_alias
-            if isinstance(alias, str):
-                data.setdefault(alias, data[name])
-                data.pop(name)
-                continue
-            choices = getattr(alias, "choices", None)
-            if choices and isinstance(choices[0], str):
-                data.setdefault(choices[0], data[name])
-                data.pop(name)
-        super().__init__(**data)
 
     @classmethod
     def settings_customise_sources(
         cls,
-        settings_cls: type[BaseSettings],
+        settings_cls: type[BaseSettings],  # noqa: ARG003
         init_settings: PydanticBaseSettingsSource,
         env_settings: PydanticBaseSettingsSource,
         dotenv_settings: PydanticBaseSettingsSource,
@@ -75,7 +60,6 @@ class LemmaSettings(BaseSettings):
     lean_verify_timeout_s: int = Field(
         default=180, ge=10, le=3600, validation_alias="LEAN_VERIFY_TIMEOUT_S",
     )
-    lean_sandbox_network: str = Field(default="none", validation_alias="LEAN_SANDBOX_NETWORK")
     lean_use_docker: bool = Field(default=True, validation_alias="LEMMA_USE_DOCKER")
     lemma_lean_docker_worker: str | None = Field(
         default=None, validation_alias="LEMMA_LEAN_DOCKER_WORKER",

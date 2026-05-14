@@ -63,14 +63,14 @@ def test_explicit_init_kwarg_beats_all(monkeypatch: pytest.MonkeyPatch) -> None:
     assert s.netuid == 7
 
 
-def test_lowercase_field_env_aliases_are_ignored(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+def test_uppercase_alias_is_canonical_env_var(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     monkeypatch.delenv("LEMMA_PREFER_PROCESS_ENV", raising=False)
     env_file = tmp_path / ".env"
-    env_file.write_text("netuid=42\nlean_use_docker=false\n", encoding="utf-8")
+    env_file.write_text("NETUID=42\nLEMMA_USE_DOCKER=false\n", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
     s = LemmaSettings(_env_file=str(env_file))
-    assert s.netuid == 0
-    assert s.lean_use_docker is True
+    assert s.netuid == 42
+    assert s.lean_use_docker is False
 
 
 def test_validator_wallet_names_returns_pair() -> None:
