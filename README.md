@@ -1,29 +1,30 @@
 # Lemma
 
-**Lemma is a [Bittensor](https://docs.learnbittensor.org/) subnet for using AI to prove mathematical theorems.**
+**Lemma is a [Bittensor](https://docs.learnbittensor.org/) subnet that pays miners to produce kernel-verified Lean proofs of hard, fresh theorems.**
 
 Lemma posts theorem challenges. Miners use AI to write Lean proof files.
 Validators use Lean to check them. Valid proofs become eligible for miner
 rewards.
 
-Bitcoin rewards miners for securing the network. Bittensor rewards miners for
-producing useful intelligence. Lemma rewards miners for producing correct
-proofs.
+Bitcoin's miners are paid to securitize blockspace. Bittensor's miners are paid
+to produce useful intelligence. Lemma's miners are paid to produce
+kernel-verified proofs of theorems that did not have a known proof at the start
+of the epoch.
 
 A Lemma round is simple:
 
 1. The subnet publishes a theorem statement.
 2. Miners use AI to write candidate Lean proof scripts.
 3. Validators verify those scripts with the pinned Lean toolchain.
-4. Passing proofs become eligible for miner rewards under Lemma's subnet rules; failing proofs do not.
+4. Verified proofs earn a share of the epoch's budget; whatever the network does not earn burns to the subnet owner.
 
-Anything that can be formalized as a Lean statement can become work for Lemma:
-algebra, number theory, logic, combinatorics, geometry, computer science,
-cryptography, and more.
+Theorems come from three streams — perturbed Mathlib lemmas, open Mathlib
+`sorry`s, and competition-style formalizations — and must pass non-triviality
+and freshness gates before publication.
 
 Lemma is still proof-of-concept software. It currently runs on Bittensor testnet as **subnet 467** (`--network test`; set `NETUID=467` in `.env`). Mainnet, also known as Finney, is separate. Only treat mainnet rewards or tokens as relevant when the deployment you are following is registered, active, and matched to the correct **network** and **netuid**.
 
-For the per-epoch budget mechanism, see [docs/burn.md](docs/burn.md).
+For the full mechanism, see [docs/litepaper-v2.md](docs/litepaper-v2.md); per-epoch budget detail is in [docs/burn.md](docs/burn.md).
 
 ## Quick start
 
