@@ -22,12 +22,8 @@ from lemma.lean.workspace import workspace_files, workspace_verify_cache_key
 from lemma.problems.base import Problem
 
 _MOUNT = "/lemma-workspace"
-
-_VERIFY_BASH = (
-    "set -e; "
-    "[ -d .lake ] || cp -a /opt/lemma-stub/.lake /opt/lemma-stub/lake-manifest.json .; "
-    "lake build"
-)
+_STUB = "/opt/lemma-stub"
+_VERIFY_BASH = "lake build"
 
 _PRUNE_BASH = r"""
 set -euo pipefail
@@ -108,6 +104,7 @@ class LeanSandbox:
 
         tmp = f"{_MOUNT}/.tmp-{uuid.uuid4().hex}"
         self._write(tmp, files)
+        self._bootstrap_cache(tmp)
         vr = self._run(tmp)
         if vr.reason in _PUBLISHABLE:
             self._sh(
@@ -126,7 +123,15 @@ class LeanSandbox:
         )
 
     def _slot_warm(self, slot: str) -> bool:
-        return self._sh(f"test -d {shlex.quote(slot)}/.lake/packages/mathlib", check=False).returncode == 0
+        return self._sh(f"test -e {shlex.quote(slot)}/.lake/packages/mathlib", check=False).returncode == 0
+
+    def _bootstrap_cache(self, workdir: str) -> None:
+        q = shlex.quote(workdir)
+        self._sh(
+            f"mkdir -p {q}/.lake && "
+            f"ln -s {_STUB}/.lake/packages {q}/.lake/packages && "
+            f"cp {_STUB}/lake-manifest.json {q}/",
+        )
 
     def _write(self, dest: str, files: dict[str, str]) -> None:
         subprocess.run(

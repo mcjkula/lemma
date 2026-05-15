@@ -45,10 +45,11 @@ def test_workspace_files_includes_required_sources() -> None:
     p = _minimal_problem()
     files = workspace_files(p, "namespace Submission\nend Submission\n")
     assert set(files.keys()) == {
-        "Challenge.lean", "Solution.lean", "Submission.lean",
+        "Challenge.lean", "Submission.lean",
         "lean-toolchain", "lakefile.toml", "AxiomCheck.lean",
     }
     assert files["Submission.lean"].startswith("namespace Submission")
     assert "Submission.t_test" in files["AxiomCheck.lean"]
+    assert "LemmaSubmissionBridge" in files["AxiomCheck.lean"]
     assert files["lean-toolchain"].strip() == p.lean_toolchain
     assert p.mathlib_rev in files["lakefile.toml"]
