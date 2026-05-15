@@ -5,21 +5,20 @@ into rewarding whatever the latest scoring layer happens to measure.
 
 ## One-Sentence Objective
 
-Lemma rewards Lean-valid proofs for published theorem statements.
+> Did the miner publish, before anyone else, a Lean-kernel-verified proof of a theorem that was hard to solve this epoch?
+
+No "and." Every mechanism change must preserve the answer to that question.
 
 ## Incentive Boundary
 
 The reward path should be proof-only:
 
-- **Eligibility:** Lean accepts the submitted proof for the locked theorem.
-- **Scoring:** an eligible proof is a positive binary event; an ordinary miss or
- Lean failure is a negative event.
-- **Allocation policy:** difficulty-weighted rolling history and same-coldkey
- partitioning can change final weights only after eligibility.
-- **Out of band:** informal reasoning can help humans, datasets, and debugging,
- but it is not a reward axis.
+- **Eligibility:** Lean accepts the submitted proof for the locked theorem under the allowed axiom set `{propext, Quot.sound, Classical.choice}`.
+- **Scoring:** rank by chain-stamped commit block (earliest wins; ties break by `block_at_registration`); price by observed difficulty `(1 - solve_fraction)²`; peel by Pareto layers; decay reign-length monopolies.
+- **Allocation policy:** the redesign sums to 1.0 every epoch; what miners did not earn burns to the subnet owner UID.
+- **Out of band:** informal reasoning can help humans, datasets, and debugging, but it is not a reward axis.
 
-See [proof-verification-incentives.md](proof-verification-incentives.md) for the concrete design.
+See [docs/burn.md](burn.md) for the concrete design.
 
 ## Why This Matters
 
@@ -34,6 +33,4 @@ Every reward change should preserve this test:
 > or more economically useful?
 
 If the answer is no, the change should not be part of the core incentive path.
-See [proof-verification-incentives.md](proof-verification-incentives.md) and
-[proof-intrinsic-decision.md](proof-intrinsic-decision.md) for the scoring
-design gates.
+See [docs/burn.md](burn.md) for the live scoring design.

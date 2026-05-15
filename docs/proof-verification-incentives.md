@@ -1,53 +1,55 @@
 # Proof Verification Incentives
 
 Lemma's reward axis is formal proof validity: miners earn for producing
-Lean-valid proofs for published theorem statements.
+Lean-valid proofs for published theorem statements, ranked by first-to-solve
+and priced by observed difficulty.
 
 ## Design Objective
 
-One sentence:
+One sentence (litepaper-v2 §1):
 
-> Lemma rewards Lean-valid proofs for published theorem statements.
+> Did the miner publish, before anyone else, a Lean-kernel-verified proof of a theorem that was hard to solve this epoch?
 
 This keeps the subnet objective close to the thing validators can reproduce:
 given a locked theorem statement and a submitted `Submission.lean`, Lean either
-accepts the proof or rejects it.
+accepts the proof under the allowed axiom set or rejects it.
 
 ## Reward Shape
 
-1. **Eligibility:** the submitted proof must pass the pinned Lean toolchain,
- Mathlib revision, sandbox policy, theorem binding checks, and cheat scans.
-2. **Proof event:** each eligible miner entry records a positive binary event.
- Invalid, missing, late, or mismatched responses record a negative event when
- the validator successfully queried that UID.
-3. **Verifier reuse:** validators may reuse a Lean result for identical proof
- payloads inside one epoch, but that does not remove a miner from rewards.
-4. **Rolling weights:** per-UID rolling scores are updated by pass/fail events.
- Harder splits move the rolling score more than easier splits. Positive
- rolling scores become normalized miner weights; same-coldkey hotkeys share
- one coldkey allocation instead of multiplying it.
+1. **Eligibility:** the submitted proof must pass the pinned Lean toolchain
+   (`DEFAULT_LEAN_TOOLCHAIN`) and Mathlib revision (`DEFAULT_MATHLIB_REV`), with
+   no `sorry` / `admit` / `native_decide` / `unsafe` tokens and no user-declared
+   axioms. Allowed axioms: `{propext, Quot.sound, Classical.choice}`.
+2. **First-to-solve rank:** chain-stamped commit block orders solvers; ties
+   break by earliest `block_at_registration`.
+3. **Observed-difficulty pricing:** `base_reward(t) = (1 - solve_fraction(t))²`.
+   Trivial theorems pay 0 — the budget burns rather than splitting among
+   trivial-solvers.
+4. **Rank decay:** rank-`k` solver receives `0.5^k × base_reward`.
+5. **Pareto peel:** miners are peeled by per-theorem reward vectors. Layer-`k`
+   miners receive `0.5^k` of the next-layer share.
+6. **Reign decay:** miners atop the front for K epochs receive
+   `(1 - 0.0033)^(K-1) × share`. Anti-monopoly insurance.
+7. **α-rename dedup:** byte-identical proofs (after stripping comments,
+   whitespace, and renaming bound variables) collapse — only the earliest commit
+   counts.
+
+The per-epoch budget invariant: `Σ miner_weights + burn_share = 1.0`. The burn
+share goes to the subnet owner UID (`metagraph.owner_hotkey`).
 
 ## Current Live Rollout
 
 The live validator path is intentionally simple: a submitted proof either passes
 Lean verification for the published theorem and enters scoring, or it does not.
-
-That binary gate is separate from final allocation. A Lean-valid proof moves the
-miner score upward; an ordinary miss or Lean failure moves it downward. The move
-is difficulty-weighted and smoothed over time, so one miss should not erase a
-strong recent history. Verifier-local infrastructure failures are excluded from
-the score update for that UID.
-
-By default, all queried UIDs share one theorem. `LEMMA_UID_VARIANT_PROBLEMS=1`
-is an opt-in anti-Sybil mode where each queried UID receives a deterministic
-same-split variant. This does not prove human identity; it makes extra accounts
-require extra proof work.
+The scoring stack composes the six mechanisms above. Nothing else affects
+miner weights.
 
 ## Out Of Scope For Rewards
 
 - Rewriting the theorem in an easier form.
-- Comment or whitespace padding.
-- Proof scripts that pass only by adding unsound assumptions.
+- Comment or whitespace padding (stripped by the fingerprint).
+- Proof scripts that depend on user-declared axioms (rejected at axiom scan).
+- Proof scripts containing `sorry`, `admit`, or `native_decide` (rejected at cheat scan).
 - Extra syntax that does not improve the checked proof.
 
 ## Cadence Implications
@@ -55,24 +57,14 @@ require extra proof work.
 Proof-verification scoring keeps the hot path focused on the verifier. Miner
 responses can be small because a proof script is enough for scoring.
 
-That makes 50-block or 25-block theorem windows more plausible, but Lean
-verification remains the hard budget. Shorter windows should be adopted only
-after warm-cache verification, remote worker throughput, and miner response time
-fit the target cadence.
+Lean verification remains the hard budget. Default `LEAN_VERIFY_TIMEOUT_S` is
+180 seconds. Warm-cache verifies (template seen this epoch) complete in
+seconds; cold-cache verifies copy the pre-baked mathlib `.lake` from
+`/opt/lemma-stub` to the volume slot, which costs a few minutes on first use.
 
-For the current generated lane, 25 blocks is a reasonable target only if the
-operator can keep verifier caches warm and bound miner response time. Cold-cache
-verification can still consume most of a 5-minute window.
+## Implementation
 
-## Implementation Sequence
-
-1. Keep proof-verification reward assembly pinned by tests. **Done.**
-2. Keep the live miner payload centered on `proof_script`. **Done.**
-3. Keep validator readiness tied to the verifier and subnet pins. **Done.**
-
-## Decision Log
-
-| Date | Decision |
-| --- | --- |
-| 2026-05 | Live rewards should be proof-only: Lean-valid proofs become reward-eligible; invalid proofs cannot receive miner rewards. |
-| 2026-05 | Chain weights should use difficulty-weighted rolling proof scores, not only the latest passed set. |
+- Scoring stack: [`lemma/scoring/`](../lemma/scoring/) (`first_to_solve.py`, `pareto_subset.py`, `observed_difficulty.py`, `champion_decay.py`, `dedup.py`, `budget.py`).
+- Verification: [`lemma/lean/sandbox.py`](../lemma/lean/sandbox.py) + [`lemma/lean/cheats.py`](../lemma/lean/cheats.py).
+- Live composition: [`lemma/validator/epoch.py`](../lemma/validator/epoch.py).
+- Budget narrative: [docs/burn.md](burn.md).

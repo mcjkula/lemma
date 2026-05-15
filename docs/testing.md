@@ -7,55 +7,50 @@ Clone repo and `uv sync --extra dev` ([getting-started.md](getting-started.md)).
 ```bash
 uv sync --extra dev
 uv run pytest tests/ -q
-uv run ruff check lemma tests tools
+uv run ruff check lemma scripts tests
 uv run mypy lemma
-uv run python scripts/ci_verify_generated_templates.py
-uv run bandit -q -r lemma -ll
+uv run python scripts/red_team_eve.py
 ```
 
-No API keys are needed for proof-only verification tests; Docker Lean tests are skipped unless enabled.
+No API keys or Docker are needed for the default suite. The live Lean kernel
+integration test (`tests/test_lean_kernel_integration.py`) is opt-in and
+skipped unless explicitly enabled.
 
-For audit or release hardening passes, also run full Bandit and pip-audit:
+## Live Lean kernel integration test
 
-```bash
-uv run bandit -q -r lemma
-uv run pip-audit \
- --ignore-vuln PYSEC-2025-49 \
- --ignore-vuln PYSEC-2022-42969
-```
-
-Full Bandit may report low-severity findings for intentional subprocess calls
-inside the Lean/Docker verifier or deterministic non-crypto RNG in problem
-sampling. Fix those only when the change removes code or ambiguity; CI gates
-medium/high findings with `-ll`.
-
-## Opt-in Lean tests
-
-| File | Enable |
-| ---- | ------ |
-| [`test_sandbox_host.py`](../tests/test_sandbox_host.py) | `LEMMA_RUN_HOST_LEAN=1` and `lake` on `PATH` |
-| [`test_docker_golden.py`](../tests/test_docker_golden.py) | `RUN_DOCKER_LEAN=1`, Docker, `LEAN_SANDBOX_IMAGE` |
-
-`LEMMA_SKIP_LAKE_CACHE=1` skips `lake exe cache get` when offline.
-
-### Docker golden
+Requires Docker + the prebuilt sandbox image + a running worker container.
 
 ```bash
 docker build -f compose/lean.Dockerfile -t lemma/lean-sandbox:latest .
-RUN_DOCKER_LEAN=1 uv run pytest tests/test_docker_golden.py -v
+docker volume create lemma-lean-cache
+docker run -d --name lean-worker \
+    -v lemma-lean-cache:/lemma-workspace \
+    lemma/lean-sandbox:latest sleep infinity
+LEMMA_LEAN_INTEGRATION=1 \
+LEMMA_LEAN_DOCKER_WORKER=lean-worker \
+    uv run pytest tests/test_lean_kernel_integration.py -v
 ```
 
-CI uses tag `lemma-lean-sandbox:ci`; locally `latest` is fine.
-Production should use a subnet-published immutable tag or digest, not the mutable local `latest` tag ([toolchain-image-policy.md](toolchain-image-policy.md)).
+The first run cold-bootstraps mathlib into the volume (a few minutes on Linux;
+~5 minutes total on macOS Docker Desktop). Subsequent runs reuse the warm cache.
 
-## Generated template gate (CI `docker-lean-sandbox` job)
+## Red-team gate
 
-[`scripts/ci_verify_generated_templates.py`](../scripts/ci_verify_generated_templates.py) always runs the cheap metadata/witness gate: every generated builder must be reachable, have coherent registry metadata, bridge the expected theorem name, and carry a complete public witness proof. With `RUN_DOCKER_LEAN_TEMPLATES=1`, it runs `lake build` on every generated template shape twice: once with `sorry` stubs and once with witness proofs plus axiom checks. By default it merges all theorems into **one** Lake workspace (single Mathlib build). Set `CI_TEMPLATE_BISECT_ON_FAIL=1` only when debugging a failing multiplex locally or on a large runner; the bisection path runs repeated Lake builds and is intentionally off by default in CI. Set `CI_TEMPLATE_MULTIPLEX=0` to fall back to per-template workspaces (slow; mainly for debugging).
+```bash
+uv run python scripts/red_team_eve.py
+```
 
-## LLM keys
+Asserts `eve_emission_ratio ≤ 2.0` across replay attack, sybil pools
+(same-coldkey and distinct-coldkey), template enumerator, and
+registration-tie-break scenarios. CI gates this.
 
-Only prover-preview commands such as **`lemma preview`** need inference keys.
+## Sandbox image
 
-`lemma preview` runs **prover + Lean** on the current subnet theorem
-(chain RPC required). Live scoring accepts only proofs that pass Lean
-verification for that theorem.
+The integration test and production validators use the same image:
+
+```bash
+docker build -f compose/lean.Dockerfile -t lemma/lean-sandbox:latest .
+```
+
+Production should use a subnet-published immutable tag or digest, not the
+mutable local `latest` tag ([toolchain-image-policy.md](toolchain-image-policy.md)).

@@ -18,8 +18,7 @@ service, dependency, or exposed network path behaves badly.
 Plainly:
 
 - `root` can control the whole server.
-- `lemma` should only operate Lemma files, hotkeys, logs, Docker access, and
- cache directories.
+- `lemma` should only operate Lemma files, hotkeys, logs, and Docker access.
 - coldkeys should stay off the Droplet either way.
 
 This is a hardening step, not a reward or proof-mechanism change.
@@ -28,10 +27,10 @@ This is a hardening step, not a reward or proof-mechanism change.
 
 1. Leave the working root services alone until you have a fresh live round with
  miner responses, validator verification, and `set_weights`.
-2. Migrate the miner Droplet first. It is simpler: no Lean Docker cache on the
- hot path unless you enabled local miner verification.
-3. Migrate the validator/Lean-worker Droplet second. It needs Docker access and
- correct ownership on `/var/lib/lemma-lean-cache`.
+2. Migrate the miner Droplet first. It is simpler: miners do not run Lean.
+3. Migrate the validator Droplet second. It needs Docker group access; the
+ Lean workspace cache lives in the `lemma-lean-cache` Docker named volume, not
+ on the host filesystem.
 4. Change one Droplet, verify it, then change the next.
 
 ## What Changes?
@@ -65,7 +64,6 @@ Run commands carefully on one Droplet at a time.
 sudo useradd --create-home --shell /bin/bash lemma || true
 sudo usermod -aG docker lemma
 sudo chown -R lemma:lemma /opt/lemma
-sudo install -d -o lemma -g lemma /var/lib/lemma-lean-cache
 ```
 
 2. Install `uv` for the `lemma` user and sync the repo:
@@ -124,8 +122,10 @@ For the validator host, repeat for:
 
 ```text
 lemma-validator
-lemma-lean-worker-http
 ```
+
+The long-lived `lemma-lean-worker` container is managed by Docker, not by
+systemd. It does not need a service user.
 
 6. Reload and restart:
 
@@ -141,8 +141,9 @@ sudo systemctl status <service-name> --no-pager
 sudo journalctl -u <service-name> -n 80 --no-pager
 ```
 
-For miners, confirm each axon port is listening. For the validator, confirm the
-Lean worker health check and wait for the next `lemma_epoch_summary`.
+For miners, confirm each axon port is listening. For the validator, confirm
+`docker ps` shows the `lemma-lean-worker` container and wait for the next
+`epoch ...` log line.
 
 ## Rollback
 

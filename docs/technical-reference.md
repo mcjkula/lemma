@@ -1,4 +1,4 @@
-> **Status:** superseded by `lemma-litepaper-redesign.md`. This document
+> **Status:** superseded by `litepaper-v2.md`. This document
 > describes mechanisms removed in the Stage-0 cut and is kept only for
 > commit-history context. Do not implement against it.
 

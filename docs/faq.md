@@ -1,7 +1,7 @@
 # Lemma FAQ
 
 Plain-language answers about Lemma, Lean proofs, Bittensor roles, rewards, and
-operational risks. For the full mechanism, read the [litepaper](litepaper.md).
+operational risks. For the full mechanism, read the [litepaper](litepaper-v2.md).
 To run the software, start with [getting-started.md](getting-started.md).
 
 ---
@@ -151,12 +151,12 @@ Yes. Alpha is the subnet reward token. Miners can earn alpha when their
 submissions pass Lean and receive weight under Lemma's rules. The first gate is
 Lean verification: if a proof does not pass Lean, it is not eligible for miner
 rewards.
-See [Rewards and Weights](litepaper.md#rewards-and-weights).
+See [The Budget and the Burn](litepaper-v2.md#the-budget-and-the-burn).
 
 ### What is the difference between testnet and mainnet?
 
-Lemma currently runs on Bittensor testnet at the netuid listed in
-[Current Status](litepaper.md#current-status). Mainnet, also called Finney, is
+Lemma currently runs on Bittensor testnet at netuid 467. Mainnet, also called
+Finney, is
 separate. Only rely on mainnet rewards if the Lemma deployment you are following
 is registered, live, and configured for the correct network and netuid.
 
@@ -225,5 +225,5 @@ Formal theorem proving is becoming a serious AI frontier. Useful references:
 
 ### Where do I start?
 
-1. [litepaper.md](litepaper.md)
+1. [litepaper-v2.md](litepaper-v2.md)
 2. [getting-started.md](getting-started.md)

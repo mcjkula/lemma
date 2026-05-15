@@ -31,8 +31,6 @@ Good default for operators.
 3. Set `AXON_EXTERNAL_IP` explicitly to the VPS public IP.
 4. Open only the miner axon port(s), for example `8091`.
 5. Run miners under systemd so they restart after reboots.
-6. Keep prover API keys in root-readable or service-user-readable `.env` files,
- not in shell history.
 
 Multiple miner hotkeys can share one VPS for testing, but each needs its own
 hotkey, `AXON_PORT`, log file, and service unit.
@@ -43,27 +41,12 @@ Good for persistent operation if the host is large enough.
 
 1. Keep the validator coldkey local.
 2. Copy only the validator hotkey to the VPS.
-3. Use Docker and a persistent Lean cache directory.
-4. Prefer a local long-lived Docker worker on the validator host:
+3. Use Docker and the `lemma-lean-cache` Docker named volume.
+4. Start the long-lived worker once with
+ `bash scripts/start_lean_docker_worker.sh --update-dotenv`. The validator
+ then executes Lean via `docker exec` against
  `LEMMA_LEAN_DOCKER_WORKER=lemma-lean-worker`.
-5. For systemd, start from
- [`deploy/systemd/lemma-validator.service`](../deploy/systemd/lemma-validator.service)
- and adjust paths only if your checkout or `uv` install differs.
-6. If using a remote Lean worker, keep it on a private network or behind TLS and
- `LEMMA_LEAN_VERIFY_REMOTE_BEARER`.
-7. Avoid SSH tunnels for production validator verification. They are fine for
- supervised tests, but one tunnel reset can turn a good miner round into
- `verified=0`.
-
-### Separate Lean Worker VPS
-
-Useful when validator CPU or disk is the bottleneck.
-
-1. Bind the worker to `127.0.0.1` when it is on the same host as the validator.
-2. For cross-host workers, use a private VPC, firewall allowlist, TLS, and
- bearer auth. `lemma lean-worker` requires bearer auth for non-loopback binds
- unless the dev-only unauthenticated override is set.
-3. Monitor worker health and logs separately from validator logs.
+5. Put the validator under systemd so it restarts after reboots.
 
 ## Creating A Separate Test Identity
 
@@ -133,11 +116,12 @@ locally.
 
 ## Same Proofs And Same-Coldkey Hotkeys
 
-Current Lemma rewards every miner entry whose proof verifies. If two miners
-submit the same proof for the same theorem and both proofs pass Lean, both can
-enter the weight map.
+Byte-identical proofs (after α-rename, comment, and whitespace normalisation)
+collapse to the earliest committer. Only that miner enters the weight map for
+the theorem.
 
-For multiple hotkeys under one coldkey, Lemma partitions that coldkey's
-allocation across its successful hotkeys. The operator does not get multiplied
-emission by registering more hotkeys under the same coldkey; the allocation is
-spread among them.
+First-to-solve rank uses the chain-stamped commit block, with
+`block_at_registration` as the tie-break. Spinning up extra hotkeys under one
+coldkey does not multiply emission: the per-epoch budget invariant
+`Σ miner_weights + burn_share = 1.0` is enforced by the scoring stack
+([sybil_economics.md](sybil_economics.md), [burn.md](burn.md)).

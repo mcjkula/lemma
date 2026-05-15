@@ -1,17 +1,16 @@
 # Getting started
 
-End-to-end: **uv** + repo → **keys** → **`uv run lemma setup`** → **miner or validator**. Sections below are copy-paste commands (swap wallet names and paths if yours differ).
+End-to-end: **uv** + repo → **keys** → edit `.env` → **miner or validator**. Sections below are copy-paste commands (swap wallet names and paths if yours differ).
 
 - Run `uv run lemma` for command help (same as `uv run lemma --help`).
-- Inference defaults: [Chutes](https://chutes.ai) OpenAI-compatible `https://llm.chutes.ai/v1` (see `.env.example`). Other OpenAI-compatible stacks use the same env vars.
-- After setup: `uv run lemma status`, then `uv run lemma problems` (or `uv run lemma problems show --current`). Deep reference: [technical-reference.md](technical-reference.md).
-- **On-chain try:** Lemma runs on **Bittensor testnet** (`--network test`), **netuid 467**—miners can earn **testnet alpha** per subnet rules. **Finney** is **mainnet**; **mainnet alpha** applies only if Lemma (or your target deployment) is registered there with emissions—never confuse network or netuid. The repo is still largely proof-of-concept; direction is in [vision](vision.md).
+- After install: `uv run lemma doctor` checks env, config, Lean sandbox worker, and chain RPC.
+- **On-chain try:** Lemma runs on **Bittensor testnet** (`--network test`), **netuid 467** — miners can earn **testnet alpha** per subnet rules. **Finney** is **mainnet**; **mainnet alpha** applies only if Lemma (or your target deployment) is registered there with emissions — never confuse network or netuid. The repo is still largely proof-of-concept; direction is in [vision](vision.md).
 
 ## Paths at a glance
 
-**Miner (most common first path):** `uv sync --extra btcli` → keys (`uv run btcli`) → `uv run lemma setup` → fund wallet → `uv run btcli subnet register --netuid 467 --network test …` → `uv run lemma miner dry-run` → **`uv run lemma preview`** (optional: live theorem → prover → Lean preview) → open `AXON_PORT` → `uv run lemma miner start`. Details: [miner.md](miner.md).
+**Miner:** `uv sync --extra btcli` → keys (`uv run btcli`) → edit `.env` (copy from `.env.example`) → fund wallet → `uv run btcli subnet register --netuid 467 --network test …` → open `AXON_PORT` → `uv run lemma miner start`. Details: [miner.md](miner.md).
 
-**Validator:** same env/keys/setup as above, then **`bash scripts/prebuild_lean_image.sh`** (first build is large) → **`uv run lemma preview`** (recommended preview) → `uv run lemma validator check` → `uv run lemma validator start`. Prefer explicit `uv run lemma validator start` / `uv run lemma validator dry-run` over ad-hoc Python entrypoints. Details: [validator.md](validator.md).
+**Validator:** same env/keys as above, then **`bash scripts/prebuild_lean_image.sh`** (first build is large) → **`bash scripts/start_lean_docker_worker.sh`** → `uv run lemma doctor` → `uv run lemma validator dry-run` → `uv run lemma validator start`. Details: [validator.md](validator.md).
 
 ## Install uv
 
@@ -29,10 +28,10 @@ uv sync --extra btcli
 ```
 
 Use one Python environment and one installer: `uv`. The core `lemma` repo owns
-the subnet dependencies and the `lemma` command. Setup, doctor, status, preview,
-miner, and validator commands all read the same `.env`.
+the subnet dependencies and the `lemma` command. All commands (`doctor`, `miner`,
+`validator`, `corpus`, `weights`) read the same `.env`.
 
-Default `uv sync` installs from **PyPI** and keeps only the **`bittensor`** SDK needed by Lemma itself. Add `--extra btcli` when you want repo-local wallet/register commands: it pulls in the official **[bittensor-cli](https://pypi.org/project/bittensor-cli/)** package through **`bittensor[cli]`**. **`btcli`** is only the **command name** those packages put on your `PATH`—there is no legitimate PyPI package you should install called `btcli`; typosquat packages have existed, so always use **`bittensor`**, **`bittensor-cli`**, or **`bittensor[cli]`** from PyPI.
+Default `uv sync` installs from **PyPI** and keeps only the **`bittensor`** SDK needed by Lemma itself. Add `--extra btcli` when you want repo-local wallet/register commands: it pulls in the official **[bittensor-cli](https://pypi.org/project/bittensor-cli/)** package through **`bittensor[cli]`**. **`btcli`** is only the **command name** those packages put on your `PATH` — there is no legitimate PyPI package you should install called `btcli`; typosquat packages have existed, so always use **`bittensor`**, **`bittensor-cli`**, or **`bittensor[cli]`** from PyPI.
 
 ## Run Local Commands
 
@@ -46,7 +45,7 @@ Run these from the core `lemma` repo root. `uv run btcli` requires
 
 ## Keys (Bittensor CLI: `btcli`)
 
-Names you will enter in `lemma setup`. Keys live under `~/.bittensor/wallets/`. Commands below use the **`btcli`** executable from **`bittensor-cli`** (see above).
+Keys live under `~/.bittensor/wallets/`. Commands below use the **`btcli`** executable from **`bittensor-cli`** (see above).
 
 ```bash
 uv run btcli wallet new_coldkey --wallet.name my_wallet --n_words 12
@@ -56,15 +55,21 @@ uv run btcli wallet balance --wallet.name my_wallet
 
 Registration and stake: [Bittensor CLI](https://docs.learnbittensor.org/).
 
-## Configure (`uv run lemma setup`)
+## Configure `.env`
 
-**Chain:** the wizard only sets **Bittensor testnet** and writes **`NETUID=467`** (no separate netuid question). Then: wallet names, prover API keys, axon port, and (for validators) Lean image. **Finney (mainnet) is TBD** for `uv run lemma configure chain` — hand-edit `.env` if Lemma later registers on mainnet; see comments in `.env.example`. Seeds from `.env.example` if `.env` is missing.
+Copy `.env.example` to `.env` and edit. Required fields:
 
-```bash
-uv run lemma setup
+```
+SUBTENSOR_NETWORK=test
+SUBTENSOR_CHAIN_ENDPOINT=wss://test.finney.opentensor.ai:443
+NETUID=467
+BT_WALLET_COLD=my_wallet
+BT_WALLET_HOT=miner   # or your validator hotkey
+AXON_PORT=8091        # miners only
+LEMMA_LEAN_DOCKER_WORKER=lemma-lean-worker  # validators only
 ```
 
-Incremental: `uv run lemma configure chain`, `configure prover`, `configure axon`, `configure lean-image`.
+See `.env.example` for the full set with defaults.
 
 ## Register on-chain
 
@@ -78,7 +83,6 @@ uv run btcli subnet register --netuid 467 --network test --wallet.name my_wallet
 ## Miner
 
 ```bash
-uv run lemma miner dry-run
 uv run lemma miner start
 ```
 
@@ -86,25 +90,16 @@ Open inbound `AXON_PORT`. Set `AXON_EXTERNAL_IP` explicitly for production miner
 
 ## Validator
 
-Build sandbox image (first build is large):
+Build sandbox image (first build is large) and start the long-lived Lean worker:
 
 ```bash
 bash scripts/prebuild_lean_image.sh
-uv run lemma validator dry-run
-uv run lemma validator start
+bash scripts/start_lean_docker_worker.sh
+uv run lemma validator dry-run    # scoring loop without writing weights
+uv run lemma validator start      # scoring loop + set_weights
 ```
 
 Use **`uv run lemma validator start`** only from the repo root.
-
-Parity: `uv run lemma meta` — [governance.md](governance.md).
-
-## Problem source
-
-- `LEMMA_PROBLEM_SOURCE=hybrid` (default): block height seeds a deterministic mix of generated templates and curated catalog rows.
-- `generated`: generated templates only, useful for rollback/focused testing.
-- `frozen`: catalog JSON — requires **`LEMMA_DEV_ALLOW_FROZEN_PROBLEM_SOURCE=1`** (public eval set); see [catalog-sources.md](catalog-sources.md).
-
-More tuning: `.env.example` and `uv run lemma configure` where possible.
 
 ## Checklist
 
@@ -112,9 +107,10 @@ More tuning: `.env.example` and `uv run lemma configure` where possible.
 | ---- | ---------------- |
 | Deps | `uv sync --extra btcli` (`--extra dev` too if developing) |
 | Keys | `uv run btcli` coldkey + hotkey |
-| Env | `uv run lemma setup` |
+| Env | Copy `.env.example` → `.env`, edit |
 | Chain | Fund + `uv run btcli subnet register` |
+| Lean | `scripts/prebuild_lean_image.sh` + `scripts/start_lean_docker_worker.sh` (validators) |
 | Miner | `uv run lemma miner start` |
-| Validator | `prebuild_lean_image.sh`, `uv run lemma validator start` |
+| Validator | `uv run lemma validator start` |
 
-[miner.md](miner.md), [validator.md](validator.md), [models.md](models.md), [testing.md](testing.md).
+[miner.md](miner.md), [validator.md](validator.md), [testing.md](testing.md).

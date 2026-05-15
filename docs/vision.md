@@ -49,8 +49,8 @@ that check honest and reproducible:
 - the theorem statement is fixed for the challenge;
 - the proof script is the editable artifact;
 - validators reject unfinished proofs and attempts to add new assumptions;
-- the Lean toolchain, Mathlib revision, and validator profile are pinned;
-- dashboard exports publish safe summary data, not raw proof scripts.
+- the Lean toolchain, Mathlib revision, and sandbox image are pinned;
+- the public proof corpus records each verified proof per epoch.
 
 These are not a separate future business phase. They are the foundation of the
 subnet. Future work should keep hardening them as traffic grows.
@@ -115,8 +115,8 @@ The near-term operator goal is plain:
 - a miner can run the AI proof path without bespoke support;
 - a validator can publish theorem challenges, verify proof files, and set
  weights reliably;
-- problem supply changes are tied to published registry hashes;
-- public dashboards explain what passed without leaking private proof exports;
+- the per-epoch budget settles as `Σ miner_weights + burn_share = 1.0` every
+ epoch, with the burn going to the subnet owner UID;
 - changes to incentives preserve the binary Lean verification gate.
 
 Under load, the practical work is queueing, timeouts, verification cost,
@@ -136,11 +136,10 @@ sustainable on a decentralized network.
 
 | Doc | Use |
 | --- | --- |
-| [Architecture](architecture.md) | Components and data flow today. |
-| [Governance](governance.md) | Pins, meta, policy. |
+| [Litepaper](litepaper-v2.md) | Full mechanism description. |
+| [Burn budget](burn.md) | Per-epoch budget and burn routing. |
+| [Governance](governance.md) | Coordination across validators. |
 | [Objective decision](objective-decision.md) | One-sentence objective and scoring boundary. |
 | [Proof verification incentives](proof-verification-incentives.md) | Proof-only reward design. |
-| [Problem supply policy](problem-supply-policy.md) | Public generated supply boundary and builder promotion checklist. |
-| [Open problem campaigns](open-problem-campaigns.md) | Future work for faithful open-problem formalization and harder proof rewards. |
 | [Getting started](getting-started.md) | Install and first commands. |
 | [Miner](miner.md) / [Validator](validator.md) | Operator detail. |

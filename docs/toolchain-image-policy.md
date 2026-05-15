@@ -19,8 +19,8 @@ The local default `lemma/lean-sandbox:latest` is only a developer convenience fo
 1. Build the sandbox image from the release checkout.
 2. Smoke-test it with the Docker golden test.
 3. Publish the image under an immutable tag or digest.
-4. Set `LEAN_SANDBOX_IMAGE` to that immutable reference on validators, miners that local-verify, and remote Lean workers.
-5. Publish the same `.env` template and validator profile hash for the validator set.
+4. Set `LEAN_SANDBOX_IMAGE` to that immutable reference on validators.
+5. Publish the same `.env` template across the validator set.
 
 Prefer a digest when your registry workflow supports it:
 
@@ -41,15 +41,11 @@ Each release should record:
 - Git commit and release tag used to build the image;
 - full image ref and resolved digest;
 - Lean toolchain and Mathlib revision;
-- `validator_profile_sha256`, which includes `LEAN_SANDBOX_IMAGE`;
-- Docker golden test result;
-- generated-template Docker stub/witness gate result when generated supply
- changes.
+- live integration-test result against the image
+ ([testing.md](testing.md)).
 
 ## Updating pins
 
-When Lean or Mathlib changes, update the constants, template, Dockerfile assumptions, generated/frozen catalog metadata, and operator image ref together. Then rebuild the sandbox image, rerun the golden test, publish the new immutable image ref, and announce the cutover block or release tag.
-
-The validator profile hash (`validator_profile_sha256`) includes the configured sandbox image ref and verification settings. Changing `LEAN_SANDBOX_IMAGE` should therefore change the profile hash operators compare.
+When Lean or Mathlib changes, update the constants, template, Dockerfile assumptions, and operator image ref together. Then rebuild the sandbox image, rerun the integration test, publish the new immutable image ref, and announce the cutover block or release tag.
 
 Host Lean is for local debugging unless the subnet policy explicitly allows it. If enabled, the host `lake` toolchain must match the published sandbox policy.
