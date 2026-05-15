@@ -22,18 +22,12 @@ from lemma.lean.workspace import workspace_files, workspace_verify_cache_key
 from lemma.problems.base import Problem
 
 _MOUNT = "/lemma-workspace"
-_VERIFY_SCRIPT = ".lemma_verify.sh"
 
-_VERIFY_BASH = """\
-set -euo pipefail
-git config --global --add safe.directory '*' >/dev/null 2>&1 || true
-if [ -d /opt/lemma-stub ] && [ ! -d .lake ]; then
-  cp -a /opt/lemma-stub/.lake /opt/lemma-stub/lake-manifest.json . 2>/dev/null || true
-fi
-[ -d .lake/packages/mathlib ] || lake exe cache get
-lake build Submission
-lake env lean AxiomCheck.lean
-"""
+_VERIFY_BASH = (
+    "set -e; "
+    "[ -d .lake ] || cp -a /opt/lemma-stub/.lake /opt/lemma-stub/lake-manifest.json .; "
+    "lake build"
+)
 
 _PRUNE_BASH = r"""
 set -euo pipefail
@@ -103,19 +97,16 @@ class LeanSandbox:
                                 stderr_tail=cheat_scan_stderr_tail(cheat))
 
         files = workspace_files(problem, submission_src)
-        files[_VERIFY_SCRIPT] = _VERIFY_BASH
         cache_key = workspace_verify_cache_key(
             problem, submission_src, include_submission_fingerprint=self.include_submission_hash,
         )
         slot = f"{_MOUNT}/{cache_key}"
 
-        self._prune(cache_key)
         if self._slot_warm(slot):
             self._write(slot, files)
             return self._run(slot)
 
         tmp = f"{_MOUNT}/.tmp-{uuid.uuid4().hex}"
-        self._sh(f"rm -rf {shlex.quote(tmp)} && mkdir -p {shlex.quote(tmp)}")
         self._write(tmp, files)
         vr = self._run(tmp)
         if vr.reason in _PUBLISHABLE:
@@ -157,7 +148,7 @@ class LeanSandbox:
         t0 = time.monotonic()
         try:
             r = subprocess.run(
-                ["docker", "exec", "--workdir", workdir, self.docker_worker, "bash", _VERIFY_SCRIPT],
+                ["docker", "exec", "--workdir", workdir, self.docker_worker, "bash", "-c", _VERIFY_BASH],
                 capture_output=True, text=True, timeout=float(self.timeout_s),
             )
         except subprocess.TimeoutExpired:

@@ -27,7 +27,7 @@ def workspace_verify_cache_key(
 
 _LAKEFILE = '''name = "lemma_stub"
 version = "0.1.0"
-defaultTargets = ["Challenge", "Solution", "Submission"]
+defaultTargets = ["Submission", "AxiomCheck"]
 
 [leanOptions]
 autoImplicit = false
@@ -45,6 +45,9 @@ name = "Solution"
 
 [[lean_lib]]
 name = "Submission"
+
+[[lean_lib]]
+name = "AxiomCheck"
 '''
 
 
