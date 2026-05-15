@@ -19,10 +19,7 @@ def _load(path: Path) -> list[dict[str, object]]:
         line = line.strip()
         if not line:
             continue
-        try:
-            row = json.loads(line)
-        except json.JSONDecodeError:
-            continue
+        row = json.loads(line)
         if isinstance(row, dict):
             rows.append(row)
     return rows
@@ -52,16 +49,24 @@ class CompetitionFormalSource:
             theorem_name = str(row.get("theorem_name", "")).strip()
             if not type_expr or not theorem_name:
                 continue
-            imports = row.get("imports")
+            imports_field = row.get("imports")
+            if isinstance(imports_field, list):
+                imports = tuple(imports_field)
+            else:
+                imports = ("Mathlib",)
+            split = str(row.get("split", "hard")).strip()
+            if not split:
+                split = "hard"
+            origin = row.get("origin", "")
             digest = hashlib.sha256(json.dumps(row, sort_keys=True).encode()).hexdigest()[:16]
             out.append(Problem(
                 id=f"competition/{digest}",
                 theorem_name=theorem_name,
                 type_expr=type_expr,
-                split=str(row.get("split", "hard")).strip() or "hard",
+                split=split,
                 lean_toolchain=self._toolchain,
                 mathlib_rev=self._rev,
-                imports=tuple(imports) if isinstance(imports, list) else ("Mathlib",),
-                extra={"source": "competition_formal", "origin": str(row.get("origin") or "")},
+                imports=imports,
+                extra={"source": "competition_formal", "origin": str(origin)},
             ))
         return out
