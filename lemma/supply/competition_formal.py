@@ -49,11 +49,10 @@ class CompetitionFormalSource:
             theorem_name = str(row.get("theorem_name", "")).strip()
             if not type_expr or not theorem_name:
                 continue
-            imports_field = row.get("imports")
-            if isinstance(imports_field, list):
-                imports = tuple(imports_field)
-            else:
-                imports = ("Mathlib",)
+            imports_field = row.get("imports", ["Mathlib"])
+            if not isinstance(imports_field, list):
+                continue
+            imports = tuple(imports_field)
             split = str(row.get("split", "hard")).strip()
             if not split:
                 split = "hard"
