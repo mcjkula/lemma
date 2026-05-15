@@ -1,22 +1,20 @@
 """End-to-end integration test against a real Lean kernel in Docker.
 
-Opt-in: skipped unless ``LEMMA_LEAN_INTEGRATION=1`` and a worker container is reachable.
-
 Setup recipe (one-time):
 
   docker build -f compose/lean.Dockerfile -t lemma/lean-sandbox:latest .
   docker volume create lemma-lean-cache
-  docker run -d --name lean-worker \\
+  docker run -d --name lemma-lean-worker \\
       -v lemma-lean-cache:/lemma-workspace \\
       lemma/lean-sandbox:latest sleep infinity
-  LEMMA_LEAN_INTEGRATION=1 \\
-  LEMMA_LEAN_DOCKER_WORKER=lean-worker \\
-      uv run pytest tests/test_lean_kernel_integration.py -v
+  echo "LEMMA_LEAN_DOCKER_WORKER=lemma-lean-worker" >> .env
+  uv run pytest tests/test_lean_kernel_integration.py -v
+
+The test skips only when Docker or the worker container is unreachable.
 """
 
 from __future__ import annotations
 
-import os
 import shutil
 import subprocess
 
@@ -25,10 +23,6 @@ from lemma.common.config import LemmaSettings
 from lemma.lean import DEFAULT_LEAN_TOOLCHAIN, DEFAULT_MATHLIB_REV
 from lemma.lean.verify_runner import run_lean_verify
 from lemma.problems.base import Problem
-
-
-def _enabled() -> bool:
-    return os.environ.get("LEMMA_LEAN_INTEGRATION", "").strip().lower() in ("1", "true", "yes")
 
 
 def _docker_available() -> bool:
@@ -54,15 +48,11 @@ def _worker_running(name: str) -> bool:
         return False
 
 
-WORKER = os.environ.get("LEMMA_LEAN_DOCKER_WORKER", "").strip()
+WORKER = LemmaSettings().lemma_lean_docker_worker
 
 
 pytestmark = [
     pytest.mark.integration,
-    pytest.mark.skipif(
-        not _enabled(),
-        reason="set LEMMA_LEAN_INTEGRATION=1 and run a lemma/lean-sandbox worker (see module docstring)",
-    ),
     pytest.mark.skipif(not _docker_available(), reason="docker daemon not reachable"),
     pytest.mark.skipif(
         not _worker_running(WORKER),
